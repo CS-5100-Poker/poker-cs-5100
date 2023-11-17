@@ -6,7 +6,7 @@ Source for rules: Wikipedia - "Texas Hold em"
 #####################################################################################
 """
 
-from src.poker.game import Game
+from src.poker.pokergamestate import PokerGameState
 
 
 # TODO: Continue major refactor for readability, including smaller functions
@@ -17,7 +17,7 @@ from src.poker.game import Game
 # TODO: Look for bugs
 # TODO: Expand on current functionality
 def main():
-    Game().play()
+    PokerGameState().play()
 
 
 if __name__ == '__main__':

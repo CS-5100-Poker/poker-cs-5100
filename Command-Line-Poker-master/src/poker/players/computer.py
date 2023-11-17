@@ -30,6 +30,11 @@ class Computer(Player):
         else:
             return self.random_play(table_raise_amount, times_table_raised, last_table_bet)
 
+    def expectiminimaxGetAction(self, table_raise_amount: int, num_times_table_raised: int, table_last_best: int) -> BettingMove:
+        maxActionCost = -9999
+        bestAction = BettingMove.FOLDED
+        for
+
     def risky_play(self, table_raise_amount: int, num_times_table_raised: int, table_last_bet: int) -> BettingMove:
         """Computer choice to check, call, raise, bet, fold, or go all-in. Player more likely to bet and raise."""
         x = random.random()
@@ -158,3 +163,4 @@ class Computer(Player):
                 return BettingMove.CALLED
             else:
                 return BettingMove.FOLDED
+
