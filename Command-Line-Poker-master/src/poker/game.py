@@ -46,17 +46,14 @@ class Game:
 
     def setup(self) -> None:
         """Sets up the game before any rounds are run."""
-        player_name = text_prompt.prompt_for_name()
-        num_computer_players = text_prompt.prompt_for_number_computer_players()
-        starting_chips = text_prompt.prompt_for_starting_chips()
-        self.create_players(player_name, num_computer_players, starting_chips)
+        num_computer_players = 1
+        starting_chips = 999999
+        self.create_players(num_computer_players, starting_chips)
+        self.table.big_blind = 19999
 
-        max_blind = int(starting_chips / 10)
-        min_blind = int(starting_chips / 50)
-        self.table.big_blind = text_prompt.prompt_for_big_blind(min_blind, max_blind)
-
-    def create_players(self, player_name, num_computer, starting_chips) -> None:
-        human = Human(player_name)
+    def create_players(self, num_computer, starting_chips) -> None:
+        playing_style1 = random.choice(list(ComputerPlayingStyle))
+        human = Computer("Agent", playing_style1)
         self.players.append(human)
         names = ['Homer', 'Bart', 'Lisa', 'Marge', 'Milhouse', 'Moe', 'Maggie', 'Nelson', 'Ralph']
         computer_names = [n for n in names if n != human.name]
