@@ -1,48 +1,46 @@
-from ..pokergamestate import PokerGameState
+# from ..pokergamestate import PokerGameState
 
 class Expectiminimax:
+    def __init__(self, bob):
+        print('Construct')
 
-    def getAction(self, gameState: PokerGameState):
-        legalMoves = gameState.getLegalActions()
+    def expectiminimax(self, depth, game_state, cards_drawn):
+        if depth == 0 or game_state.game.check_game_over: #start with d = 3
+            return game_state.eval_game_state()
 
-        for action in legalMoves:
-            newState = gameState.getSuccessorState(0, action)
-            actionCost = gameState.players[0]
+        if cards_drawn:
+            return game_state.eval_game_state()
+        elif game_state.maxPlayerTurn:
+            return self.get_max_action_value(game_state, depth)
+        else:
+            return self.get_min_action_value(game_state, depth)
 
-    def getMaxAction(self, gameState: PokerGameState, depth):
-        depth += 1
+    def get_max_action_value(self, game_state, depth):
+        depth -= 1
 
-        if gameState.check_game_over():
-            return self.evaluationFunction(gameState)
+        if game_state.check_game_over():
+            return self.evaluationFunction(game_state.game)
 
         bestScore = -999
 
-        for action in gameState.getLegalActions():
-            newState = gameState.getSuccessorState(0, action)
-            bestScore = max(bestScore, self.getExpectedCost(newState, depth))
+        for action in game_state.getLegalActions():
+            new_state = game_state.getSuccessorState(0, action)
+            bestScore = max(bestScore, expectiminimax(depth, new_state, game_state.is_card_draw()))
 
         return bestScore
 
-    def getOpponentMaxAction(self, gameState, depth):
-        if gameState.check_game_over():
-            return self.evaluationFunction(gameState)
+    def get_min_action_value(self, game_state, depth):
+        depth -= 1
 
-        probability = 0.25 # this would be pulled into another method to calculate based on cards to be played
-        expectedValue = 0
+        if game_state.check_game_over():
+            return self.evaluationFunction(game_state.game)
 
-        for action in gameState.getLegalActions():
-            currentState = gameState.getSuccessorState(0, action)
-            newScore = self.getMaxAction(currentState, depth)
-            expectedValue += probability * newScore
-        return expectedValue
+        bestScore = -999
 
+        for action in game_state.getLegalActions():
+            new_state = game_state.getSuccessorState(0, action)
+            bestScore = min(bestScore, expectiminimax(depth, new_state, game_state.is_card_draw()))
 
-    def evaluationFunction(self, gameState): # this is where we evaluate based on hand value and table value
-        pots = gameState.table.pots
-        lastBet = gameState.table.last_bet
-
-        visibleCards = gameState.table.community
-
-        return 1
+        return bestScore
 
 

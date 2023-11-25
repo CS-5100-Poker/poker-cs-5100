@@ -13,9 +13,10 @@ from src.poker.prompts import text_prompt
 from src.poker.table import Table
 from src.poker.utils import hand_ranking_utils
 from src.poker.utils import io_utils
+from src.poker.agents.expectiminimax import Expectiminimax
 
 
-class PokerGameState:
+class Game:
     """Control center of the game."""
 
     def __init__(self):
@@ -257,8 +258,20 @@ class PokerGameState:
                 betting_index += 1
                 continue
             self.table.update_raise_amount(self.phase)
-            move = betting_player.choose_next_move(self.table.raise_amount, self.table.num_times_raised,
-                                                   self.table.last_bet)
+            # move = betting_player.choose_next_move(self.table.raise_amount, self.table.num_times_raised,
+                                                   # self.table.last_bet)
+            game_state = PokerGameState(betting_player, self, self.table.last_bet)
+            max_action_value = -9999
+            max_action = None
+            expectiminimax = Expectiminimax("hi")
+            for action in game_state.get_legal_actions():
+                next_state = game_state.get_successor_state(betting_player, action)
+                next_state_value = expectiminimax.expectiminimax(3, next_state, False)
+                if next_state_value > max_action_value:
+                    max_action_value = next_state_value
+                    max_action = action
+            move = max_action
+            print(move)
             self.table.take_bet(betting_player, move)
             text_prompt.show_player_move(betting_player, move, self.pause, betting_player.bet)
             if move is BettingMove.RAISED or move is BettingMove.BET:
@@ -365,35 +378,60 @@ class PokerGameState:
                     text_prompt.show_game_winners(self.players, winners_names)
                     return True
                 return False
+    def get_active_players(self) -> list[Player]:
+        return [player for player in self.players if player.is_in_game]
 
-    def getLegalActions(self):
+class PokerGameState:
+    def __init__(self, curr_player, game, table_last_best: int):
+        self.game = game
+        self.current_player = curr_player
+        self.our_hand = curr_player.hand
+        self.last_bet = table_last_best
+        self.winnings = -table_last_best
+
+    def max_player_turn(self):
+        return true
+
+    def get_legal_actions(self):
         return [BettingMove.FOLDED, BettingMove.RAISED, BettingMove.CALLED, BettingMove.ALL_IN]
 
-    def getSuccessorState(self, playerIndex, action):
-        if self.check_game_over():
+    def get_successor_state(self, player, action):
+        if self.game.check_game_over():
             raise Exception("Game over, no successor state")
 
-        state = PokerGameState(self)
-        player = state.players[playerIndex]
-        active_players = state.get_active_players()
+        state = PokerGameState(self.current_player, self.game, self.last_bet)
+        active_players = state.game.get_active_players()
 
-        state.table.take_bet(player, action) # take the best
-
-        #Below might not be needed FROM HERE
-        if move is BettingMove.RAISED or move is BettingMove.BET:
-            for active_player in active_players: # the remaining player is defin
-                if not active_player.is_folded:
-                    active_player.is_locked = False
-            for person in active_players:
-                if person.is_all_in:
-                    person.is_locked = True
-        ## UNTIL HERE
+#  table_raise_amount: int, num_times_table_raised: int, table_last_best: int
+        state.game.table.take_bet(player, action)  # update game
+        # if action is BettingMove.FOLDED:
+        #     self.our_hand = []
+        #     self.winnings -= self.last_bet
+        # elif action is BettingMove.RAISED:
+        #     self.winnings
 
         return state
 
+    def eval_game_state(self):
+        community = self.game.table.community
+        currentHand = self.our_hand
+        if len(community) == 0:
+            return self.current_player.best_hand_score
+        # calculate based on our hand, and dealt 5
+        elif len(community) == 3:
+            return self.current_player.best_hand_score + 1
+        # calculate based on our hand, and community 3 + dealt 2
+        elif len(community) == 4:
+            return self.current_player.best_hand_score + 2
+        # calculate based on our hand, community 4, and dealt 1
+        else: # all cards are visible
+            return self.current_player.best_hand_score + 3
+        # determine the value of our hands
 
-
-
-
-    def get_active_players(self) -> list[Player]:
-        return [player for player in self.players if player.is_in_game]
+    def is_card_draw(self): # card_drawn if all players have matched bets, or are all in or folded
+        active_players = self.game.get_active_players()
+        if all(player.is_locked or player.is_all_in for player in active_players):
+            return true
+        if [player.is_folded for player in active_players].count(False) == 1:
+            return true
+        return false
