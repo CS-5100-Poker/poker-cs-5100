@@ -92,18 +92,10 @@ def show_player_stats(initial_players, isShowDown=False):
             if this_player.is_folded or this_player.hand == []:
                 for j in range(2):
                     hand_str.append('     ')
-            # elif this_player.is_human:
-            elif isinstance(this_player, Human):
+            # show all cards for all players (no need to hide any hands):
+            else:
                 for card in this_player.hand:
                     hand_str.append(str(card))
-            # elif not this_player.is_human and isShowDown:
-            elif isShowDown and not isinstance(this_player, Human):
-                for card in this_player.hand:
-                    hand_str.append(str(card))
-            # elif not this_player.is_human and not isShowDown:
-            elif not isShowDown and not isinstance(this_player, Human):
-                for j in range(len(this_player.hand)):
-                    hand_str.append('[###]')
             hand_str = '  '.join(hand_str)
             if isShowDown:
                 chips = f'             Chips:{this_player.chips:>6}'
