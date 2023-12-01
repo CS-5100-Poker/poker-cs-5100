@@ -2,17 +2,17 @@ from __future__ import annotations
 
 import random
 
-from src.poker.deck import Deck
-from src.poker.enums.betting_move import BettingMove
-from src.poker.enums.computer_playing_style import ComputerPlayingStyle
-from src.poker.enums.phase import Phase
-from src.poker.players.computer import Computer
-from src.poker.players.human import Human
-from src.poker.players.player import Player
-from src.poker.prompts import text_prompt
-from src.poker.table import Table
-from src.poker.utils import hand_ranking_utils
-from src.poker.utils import io_utils
+from .deck import Deck
+from .enums.betting_move import BettingMove
+from .enums.computer_playing_style import ComputerPlayingStyle
+from .enums.phase import Phase
+from .players.computer import Computer
+from .players.human import Human
+from .players.player import Player
+from .prompts import text_prompt
+from .table import Table
+from .utils import hand_ranking_utils
+from .utils import io_utils
 
 from players.mcts_agent import MCTSAgent
 from enums.computer_playing_style import ComputerPlayingStyle
@@ -55,7 +55,7 @@ class Game:
 
     def create_players(self, num_computer, starting_chips) -> None:
         playing_style1 = random.choice(list(ComputerPlayingStyle))
-        human = Computer("Agent", playing_style1)
+        human = Computer("Agent", 'MCTS')
         self.players.append(human)
         names = ['Homer', 'Bart', 'Lisa', 'Marge', 'Milhouse', 'Moe', 'Maggie', 'Nelson', 'Ralph']
         computer_names = [n for n in names if n != human.name]
