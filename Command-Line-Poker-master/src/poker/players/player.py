@@ -2,8 +2,8 @@ from __future__ import annotations
 
 from abc import ABC, abstractmethod
 
-from src.poker.card import Card
-from src.poker.enums.betting_move import BettingMove
+from ..card import Card
+from ..enums.betting_move import BettingMove
 
 
 class Player(ABC):

@@ -6,7 +6,7 @@ Source for rules: Wikipedia - "Texas Hold em"
 #####################################################################################
 """
 
-from src.poker.pokergamestate import PokerGameState
+from .poker.pokergamestate import PokerGameState
 
 
 # TODO: Continue major refactor for readability, including smaller functions
