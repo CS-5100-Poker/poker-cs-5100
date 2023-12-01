@@ -1,7 +1,6 @@
 import random
 
-from src.poker.card import Card
-
+from .card import Card
 
 class Deck:
     """A standard deck of 52 playing cards.
