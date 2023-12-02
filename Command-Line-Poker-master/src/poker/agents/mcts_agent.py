@@ -1,6 +1,7 @@
 from abc import ABC
 
-from .player import Player
+from ..players.player import Player
+from ..pokergamestate import PokerGameState
 from ..enums.betting_move import BettingMove
 import math
 import random
@@ -8,15 +9,20 @@ import random
 import random
 import math
 
-class MCTSNode:
-    def __init__(self, game_state, parent=None, move=None):
+class MCTSNode():
+    def __init__(self, betting_player, game_state, parent=None, move=None):
         self.game_state = game_state
         self.parent = parent
         self.move = move
-        self.children = []
         self.wins = 0
         self.visits = 0
         self.untried_actions = game_state.get_legal_actions()
+        self.player = betting_player
+
+        successors = []
+        for action in game_state.get_legal_actions():
+           successors.append(game_state.get_successor_state(betting_player, action))
+        self.children = successors
 
     def ucb1(self, exploration_constant=1.41):
         if self.visits == 0:
@@ -24,11 +30,14 @@ class MCTSNode:
         return (self.wins / self.visits) + exploration_constant * math.sqrt(math.log(self.parent.visits) / self.visits)
 
     def is_fully_expanded(self):
+        print(f"length of untried action: {len(self.untried_actions)}")
         return len(self.untried_actions) == 0
+
+    def is_leaf(self):
+        return self.game_state.game.check_game_over()
 
     def add_child(self, child_node):
         self.children.append(child_node)
-        self.untried_actions.remove(child_node.move)
 
     def update(self, win):
         self.visits += 1
@@ -38,24 +47,29 @@ class MCTSNode:
         return max(self.children, key=lambda node: node.ucb1())
 
     def expand(self):
+        print("Expand called!")
         action = self.untried_actions.pop()
-        new_state = self.game_state.apply_action(action)
-        child_node = MCTSNode(game_state=new_state, parent=self, move=action)
+        print(f"ACTION {action}")
+        new_state = self.game_state.get_successor_state(self.player, action)
+        new_state.incrementVisits()
+        child_node = MCTSNode(self.player, game_state=new_state, parent=self, move=action)
         self.add_child(child_node)
         return child_node
 
     def simulate(self):
         current_state = self.game_state
-        while not current_state.is_terminal():
+        while not current_state.game.check_game_over():
             possible_moves = current_state.get_legal_actions()
             action = random.choice(possible_moves)
-            current_state = current_state.apply_action(action)
-        return current_state.get_result(self.parent.game_state.current_player)
+            current_state = current_state.get_successor_state(self.player, action)
+        # return current_state.get_result(self.parent.game_state.current_player)
+        return current_state.eval_game_state()
 
 
-class MCTSTree:
-    def __init__(self, root_game_state):
-        self.root = MCTSNode(game_state=root_game_state)
+class MCTSTree():
+    def __init__(self, root_game_state, betting_player):
+        self.root = MCTSNode(betting_player, game_state=root_game_state)
+        self.player = betting_player
 
     def select_promising_node(self):
         """
@@ -85,9 +99,12 @@ class MCTSTree:
         """
         Executes the Monte Carlo Tree Search algorithm for a given number of simulations.
         """
+        print("Before Best move loop")
+        print(f"Simulations Number: {simulations_number}")
         for _ in range(simulations_number):
+            print("In Best move loop")
             promising_node = self.select_promising_node()
-            if not promising_node.game_state.is_terminal():
+            if not promising_node.game_state.game.check_game_over():
                 self.expand_node(promising_node)
             simulation_result = promising_node.simulate()
             self.backpropagate(promising_node, simulation_result)
@@ -100,8 +117,14 @@ class MCTSTree:
         """
         best_win_rate = -1
         best_move = None
+        print("Entering FOR LOOP")
+        print(f"Available children: {self.root.children}")
         for child in self.root.children:
+            print("In FOR LOOP")
+            print(f" Current child: {child}")
+            print(f" Current child: {child.visits}")
             if child.visits > 0:
+                print(f" Current child wins: {child.wins}")
                 win_rate = child.wins / child.visits
                 if win_rate > best_win_rate:
                     best_win_rate = win_rate
@@ -109,17 +132,17 @@ class MCTSTree:
         return best_move
 
 
-class MCTSAgent(Player, ABC):
-    def __init__(self, name, mcts_iterations=100):
-        super().__init__(name)
+class MCTSAgent():
+    def __init__(self, mcts_iterations=100):
         self.mcts_iterations = mcts_iterations
 
-    def choose_action(self, game_state):
+    def choose_action(self, game_state, betting_player):
         """
         Choose an action based on the MCTS algorithm.
         :param game_state: The current state of the game.
         :return: The chosen action.
         """
-        mcts_tree = MCTSTree(game_state)
+        print("Entering choose_action")
+        mcts_tree = MCTSTree(game_state, betting_player)
         best_move = mcts_tree.best_move(self.mcts_iterations)
         return best_move

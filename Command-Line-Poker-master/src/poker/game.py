@@ -3,6 +3,7 @@ from __future__ import annotations
 import random
 
 from .deck import Deck
+from .pokergamestate import PokerGameState
 from .enums.betting_move import BettingMove
 from .enums.computer_playing_style import ComputerPlayingStyle
 from .enums.phase import Phase
@@ -13,9 +14,8 @@ from .prompts import text_prompt
 from .table import Table
 from .utils import hand_ranking_utils
 from .utils import io_utils
+from .agents.mcts_agent import MCTSAgent
 
-from players.mcts_agent import MCTSAgent
-from enums.computer_playing_style import ComputerPlayingStyle
 
 class Game:
     """Control center of the game."""
@@ -259,8 +259,14 @@ class Game:
                 betting_index += 1
                 continue
             self.table.update_raise_amount(self.phase)
-            move = betting_player.choose_next_move(self.table.raise_amount, self.table.num_times_raised,
-                                                   self.table.last_bet)
+
+            game_state = PokerGameState(betting_player, self, self.table.last_bet)
+            print(f"GAME Game state visits: {game_state.visits}")
+            mcts = MCTSAgent()
+
+            print("MCTS CHOOSING BEST ACTION...")
+            move = mcts.choose_action(game_state, betting_player)
+            print(f"MCTS HAS CHOSEN BEST ACTION: {move}")
             self.table.take_bet(betting_player, move)
             text_prompt.show_player_move(betting_player, move, self.pause, betting_player.bet)
             if move is BettingMove.RAISED or move is BettingMove.BET:
