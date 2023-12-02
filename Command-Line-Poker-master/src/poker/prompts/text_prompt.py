@@ -13,7 +13,7 @@ def prompt_for_name() -> str:
     """Prompts user for their name."""
     clear_screen()
     print(big_text.welcome)
-    print('\n' * 4)
+    #print('\n' * 4)
     name = ''
     while not name.strip():
         name = input('What is your name?    ')
@@ -23,7 +23,7 @@ def prompt_for_name() -> str:
 def prompt_for_number_computer_players() -> int:
     clear_screen()
     print(big_text.settings)
-    print('\n' * 4)
+    #print('\n' * 4)
     error_message = '\nMust choose between 1 to 5 computer players.'
     num_computer_players = 0
     while num_computer_players < 1 or num_computer_players > 5:
@@ -39,7 +39,7 @@ def prompt_for_number_computer_players() -> int:
 def prompt_for_starting_chips() -> int:
     clear_screen()
     print(big_text.settings)
-    print('\n' * 4)
+    #print('\n' * 4)
     error_message = '\nMust choose between 100 and 999,999 chips.'
     starting_chips = 0
     while starting_chips < 100 or starting_chips > 999999:
@@ -56,7 +56,7 @@ def prompt_for_starting_chips() -> int:
 def prompt_for_big_blind(min_blind: int, max_blind: int) -> int:
     clear_screen()
     print(big_text.settings)
-    print('\n' * 3)
+    #print('\n' * 3)
     print('Last question!')
     error_message = f'\nBig Blind amount must be between {min_blind:,} - {max_blind:,}, ' \
                     f'or game will be too long or too short. '
@@ -206,7 +206,7 @@ def show_pot_winners(hand_winners, showdown_players, pot_num):
             print(f'           {hand_str}      {hand_winners[i].name}')
             if i == len(hand_winners) - 1:
                 print(
-                    f"\n\n           Split {pot_type} with a {hand_winners[i].best_hand_rank}{hand_winners[i].rank_subtype}!")
+                    f"\n           Split {pot_type} with a {hand_winners[i].best_hand_rank}{hand_winners[i].rank_subtype}!")
                 if hand_winners[0].kicker_card:
                     kicker_str = f'Kicker card was the  {hand_winners[0].kicker_card.rank_symbol}'
                     print(f"{kicker_str:>33}")
@@ -223,12 +223,12 @@ def show_table(initial_players: list[Player], table: Table, time: float = 0):
     """
     clear_screen()
     show_player_stats(initial_players)
-    print('\n')
+    #print('\n')
     show_community(table.community)
     print()
     show_blinds(table)
     show_pots(table.pots)
-    print('\n\n')
+    #print('\n\n')
     sleep(time)
 
 
@@ -244,10 +244,10 @@ def show_showdown_results(initial_players, table, hand_winners, showdown_players
     """
     clear_screen()
     show_player_stats(initial_players, isShowDown=True)
-    print('\n')
+    #print('\n')
     show_community(table.community)
     show_pots(table.pots)
-    print('\n\n\n')
+    #print('\n\n\n')
     show_pot_winners(hand_winners, showdown_players, pot_num)
     print()
     input("Press any key to continue....")
@@ -267,7 +267,7 @@ def show_game_winners(initial_players, winners_names):
         player_name = f'{players[i].name:<12}'
         chips = f'Chips:{players[i].chips:>6}'
         print(f"{player_name:>44}{chips:>18}")
-    print('\n' * 5)
+    #print('\n' * 5)
     if len(winners_names) == 1:
         winners_str = winners_names[0]
     elif len(winners_names) == 2:
@@ -350,13 +350,13 @@ def show_all_in(player_name, time):
 def show_default_winner_fold(player_name):
     print(' >>> All other players folded...')
     print(f' >>> {player_name} won the pot!')
-    input("\n\nPress any key to continue....")
+    input("\nPress any key to continue....")
 
 
 def show_default_winner_eligibility(player_name, side_pot_num):
-    print(f'\n\n >>> {player_name} is the only player eligible for SIDE POT #{side_pot_num}. ')
+    print(f'\n >>> {player_name} is the only player eligible for SIDE POT #{side_pot_num}. ')
     print(f' >>> Gave those chips to {player_name}.')
-    input("\n\nPress any key to continue....")
+    input("\nPress any key to continue....")
 
 
 def show_phase_change_alert(phase: Phase, dealer: str, pause_time: float):

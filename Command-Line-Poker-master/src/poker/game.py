@@ -353,6 +353,13 @@ class Game:
         Returns:
             bool: True if the game is over, False otherwise.
         """
+        countNotFolded = 0
+        for player in self.get_active_players():
+            if not player.is_folded:
+                countNotFolded+=1
+        if countNotFolded <= 1:
+            return True
+
         for player in self.get_active_players():
             if player.chips == 0:
                 player.is_in_game = False

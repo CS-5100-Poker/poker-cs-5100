@@ -1,4 +1,5 @@
 from .enums.betting_move import BettingMove
+from .prompts.text_prompt import show_table
 
 
 class PokerGameState:
@@ -14,23 +15,39 @@ class PokerGameState:
         return True
 
     def get_legal_actions(self):
-        return [BettingMove.FOLDED, BettingMove.RAISED, BettingMove.CALLED, BettingMove.ALL_IN]
+        return [BettingMove.RAISED, BettingMove.FOLDED, BettingMove.CALLED]
 
     def get_successor_state(self, player, action):
+        print(f"ACTION: {action}")
+        print(f"PLAYER: {player}")
         if self.game.check_game_over():
             raise Exception("Game over, no successor state")
 
         state = PokerGameState(self.current_player, self.game, self.last_bet)
-        print(f"POKERGAMESTATE: Game state visits: {state.visits}")
+        state.game.table.take_bet(player, action)
         active_players = state.game.get_active_players()
 
-        #  table_raise_amount: int, num_times_table_raised: int, table_last_best: int
-        state.game.table.take_bet(player, action)  # update game
-        # if action is BettingMove.FOLDED:
-        #     self.our_hand = []
-        #     self.winnings -= self.last_bet
-        # elif action is BettingMove.RAISED:
-        #     self.winnings
+        # check status of all players, to see if locked in or not
+        for active_player in active_players:
+            if not active_player.is_folded:
+                active_player.is_locked = False
+        for person in active_players:
+            if person.is_all_in:
+                person.is_locked = True
+
+        if all(player.is_locked or player.is_all_in for player in active_players):
+            state.game.deal_cards()
+
+
+        # check if "locked in" - everyone has called/checked
+            # deal cards, update the community cards
+            # or, we show cards if the community has 5
+        # else
+            # return
+
+        print(f"POKERGAMESTATE: Game state visits: {state.visits}")
+
+        show_table(state.game.players, state.game.table)
 
         return state
 
