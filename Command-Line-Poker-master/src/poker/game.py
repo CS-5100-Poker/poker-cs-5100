@@ -14,8 +14,9 @@ from .table import Table
 from .utils import hand_ranking_utils
 from .utils import io_utils
 
-from players.mcts_agent import MCTSAgent
-from enums.computer_playing_style import ComputerPlayingStyle
+from src.poker.players.mcts_agent import MCTSAgent
+from src.poker.enums.computer_playing_style import ComputerPlayingStyle
+from src.poker.agents.deep_q import DeepQLearningAgent
 
 class Game:
     """Control center of the game."""
@@ -35,6 +36,13 @@ class Game:
         """Runs the main loop of the game."""
         while True:
             self.reset_for_next_round()
+            for player in self.players:
+                if isinstance(player, DeepQLearningAgent):
+                    # Deep Q-Learning agent's turn
+                    state = self.get_current_state_for_player(player)
+                    action = player.decide_action(state)
+                    next_state, reward, done = self.apply_action(action)
+                    player.update_state_and_learn(state, action, reward, next_state, done)
             for phase in Phase:
                 self.phase = phase
                 self.deal_cards()
@@ -55,7 +63,8 @@ class Game:
 
     def create_players(self, num_computer, starting_chips) -> None:
         playing_style1 = random.choice(list(ComputerPlayingStyle))
-        human = Computer("Agent", 'MCTS')
+        # human = Computer("MCTS", 'MCTS')
+        human = DeepQLearningAgent("DeepQ", 20, 5)
         self.players.append(human)
         names = ['Homer', 'Bart', 'Lisa', 'Marge', 'Milhouse', 'Moe', 'Maggie', 'Nelson', 'Ralph']
         computer_names = [n for n in names if n != human.name]

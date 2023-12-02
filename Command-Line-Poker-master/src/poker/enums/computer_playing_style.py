@@ -6,3 +6,4 @@ class ComputerPlayingStyle(Enum):
     RISKY = auto()
     RANDOM = auto()
     MONTE_CARLO_TREE_SEARCH = 'MCTS'
+    DEEP_Q_LEARNING = 'DEEPQ'
