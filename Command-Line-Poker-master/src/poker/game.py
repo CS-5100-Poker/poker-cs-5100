@@ -356,7 +356,7 @@ class Game:
         countNotFolded = 0
         for player in self.get_active_players():
             if not player.is_folded:
-                countNotFolded+=1
+                countNotFolded += 1
         if countNotFolded <= 1:
             return True
 
@@ -383,3 +383,57 @@ class Game:
 
     def get_active_players(self) -> list[Player]:
         return [player for player in self.players if player.is_in_game]
+
+    def apply_action(self, player, action):
+        if action == BettingMove.FOLDED:
+            player.fold()  # Mark the player as folded
+        elif action == BettingMove.CALLED:
+            call_amount = self.table.current_bet - player.current_bet
+            player.chips -= call_amount
+            self.table.pot += call_amount
+            player.current_bet = self.table.current_bet
+        elif action == BettingMove.RAISED:
+            raise_amount = ...  # Determine the raise amount based on game rules
+            player.chips -= raise_amount
+            self.table.pot += raise_amount
+            self.table.current_bet += raise_amount
+            player.current_bet = self.table.current_bet
+        elif action == BettingMove.ALL_IN:
+            all_in_amount = player.chips
+            player.chips = 0
+            self.table.pot += all_in_amount
+            player.current_bet += all_in_amount
+            player.is_all_in = True
+
+        self.update_player_status(player)
+        self.update_round_status()
+
+    def advance_to_next_round(self):
+        if self.phase == Phase.PREFLOP:
+            self.phase = Phase.FLOP
+            self.deal_community(3)
+        elif self.phase == Phase.FLOP:
+            self.phase = Phase.TURN
+            self.deal_community(1)
+        elif self.phase == Phase.TURN:
+            self.phase = Phase.RIVER
+            self.deal_community(1)
+        elif self.phase == Phase.RIVER:
+            self.determine_winners()
+            self.reset_for_next_round()
+
+    def update_turn(self):
+        active_players = self.get_active_players()
+        current_index = active_players.index(self.current_player)
+        next_index = (current_index + 1) % len(active_players)
+        self.current_player = active_players[next_index]
+
+        while self.current_player.has_folded or self.current_player.is_all_in:
+            next_index = (next_index + 1) % len(active_players)
+            self.current_player = active_players[next_index]
+
+    def handle_game_over(self):
+        if self.check_game_over():  # Assuming this method checks if the game is over
+            self.determine_winners()
+            self.distribute_pot()
+            self.reset_game()

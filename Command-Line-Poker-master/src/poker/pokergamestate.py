@@ -1,3 +1,5 @@
+import copy
+
 from .enums.betting_move import BettingMove
 from .prompts.text_prompt import show_table
 
@@ -15,28 +17,45 @@ class PokerGameState:
         return True
 
     def get_legal_actions(self):
-        return [BettingMove.RAISED, BettingMove.FOLDED, BettingMove.CALLED]
+        legal_actions = []
+        current_bet = self.game.current_bet
+        player_chips = self.current_player.chips
+
+        if current_bet == 0:
+            legal_actions.append(BettingMove.CHECKED)
+        else:
+            if player_chips >= current_bet:
+                legal_actions.append(BettingMove.CALLED)
+
+        if player_chips > current_bet:
+            legal_actions.append(BettingMove.RAISED)
+
+        if player_chips > 0:
+            legal_actions.append(BettingMove.FOLDED)
+
+        if current_bet > player_chips > 0:
+            legal_actions.append(BettingMove.ALL_IN)
+
+        return legal_actions
 
     def get_successor_state(self, player, action):
-        print(f"ACTION: {action}")
-        print(f"PLAYER: {player}")
-        if self.game.check_game_over():
-            raise Exception("Game over, no successor state")
+        new_state = copy.deepcopy(self)  # Create a deep copy of the current state
+        new_state.apply_action(player, action)
 
-        state = PokerGameState(self.current_player, self.game, self.last_bet)
-        state.game.table.take_bet(player, action)
-        active_players = state.game.get_active_players()
+        if new_state.is_round_over():
+            new_state.advance_to_next_round()  # Deal new community cards if necessary
 
-        # check status of all players, to see if locked in or not
-        for active_player in active_players:
-            if not active_player.is_folded:
-                active_player.is_locked = False
-        for person in active_players:
-            if person.is_all_in:
-                person.is_locked = True
+        new_state.update_turn()  # Move to the next player
 
-        if all(player.is_locked or player.is_all_in for player in active_players):
-            state.game.deal_cards()
+        if new_state.is_game_over():
+            new_state.handle_game_over()  # Determine winner, distribute pot, etc.
+
+        print(f"POKERGAMESTATE: Game state visits: {new_state.visits}")
+
+        print("MCTS Table Iteration ")
+        show_table(new_state.game.players, new_state.game.table)
+
+        return new_state
 
 
         # check if "locked in" - everyone has called/checked
@@ -44,10 +63,6 @@ class PokerGameState:
             # or, we show cards if the community has 5
         # else
             # return
-
-        print(f"POKERGAMESTATE: Game state visits: {state.visits}")
-
-        show_table(state.game.players, state.game.table)
 
         return state
 

@@ -322,6 +322,7 @@ def show_player_move(player: Player, move: BettingMove, pause: float, bet=None):
     elif move is BettingMove.ALL_IN:
         print(f' >>> {player.name} went all-in!')
     elif move is BettingMove.CALLED:
+
         print(f' >>> {player.name} called {player.bet} {chips}. ←→')
     elif move is BettingMove.BET:
         print(f' >>> {player.name} bet {player.bet} {chips}. ↑')
