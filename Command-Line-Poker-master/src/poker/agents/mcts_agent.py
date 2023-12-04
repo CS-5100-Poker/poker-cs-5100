@@ -3,7 +3,7 @@ import random
 import math
 
 class MCTSNode:
-    def __init__(self, betting_player, game_state, parent=None, move=None):
+    def __init__(self, agent_index, game_state, deck, parent=None, move=None):
         self.game_state = game_state
         self.parent = parent
         self.move = move
@@ -11,7 +11,8 @@ class MCTSNode:
         self.visits = 0
         self.untried_actions = game_state.get_legal_actions()
         self.children = []
-        self.player = betting_player
+        self.player_index = agent_index
+        self.deck = deck
 
     def ucb1(self, exploration_constant=1.41):
         if self.visits == 0:
@@ -36,25 +37,25 @@ class MCTSNode:
 
     def expand(self):
         action = self.untried_actions.pop()
-        new_state = self.game_state.get_successor_state(self.player, action)
-        child_node = MCTSNode(self.player, new_state, self, action)
+        new_state = self.game_state.get_successor_state(self.player_index, action, self.deck)
+        child_node = MCTSNode(self.player_index, new_state, self, action)
         self.add_child(child_node)
         return child_node
 
     def simulate(self):
         current_state = self.game_state
-        players = current_state.game.players
-        current_player_index = players.index(self.player)
+        index_iteration = self.player_index
         while not current_state.game.check_game_over():
             possible_moves = current_state.get_legal_actions()
             action = random.choice(possible_moves)
-            current_state = current_state.get_successor_state(players[current_player_index], action)
-            current_player_index = (current_player_index + 1) % len(players)
+            current_state = current_state.get_successor_state(index_iteration, action, self.deck)
+            index_iteration = (index_iteration + 1) % len(current_state.players)
         return current_state.eval_game_state()
 
 class MCTSTree:
-    def __init__(self, root_game_state, betting_player):
-        self.root = MCTSNode(betting_player, root_game_state)
+    def __init__(self, root_game_state, agent_index, deck):
+        self.root = MCTSNode(agent_index, root_game_state, deck)
+        self.deck = deck
 
     def select_promising_node(self):
         current_node = self.root
@@ -92,9 +93,11 @@ class MCTSTree:
         return best_move
 
 class MCTSAgent:
-    def __init__(self, mcts_iterations=10):
+    def __init__(self, game_state, deck, mcts_iterations=10):
         self.mcts_iterations = mcts_iterations
+        self.game_state = game_state
+        self.deck = deck
 
-    def choose_action(self, game_state, betting_player):
-        mcts_tree = MCTSTree(game_state, betting_player)
+    def choose_action(self, agent_index):
+        mcts_tree = MCTSTree(self.game_state, agent_index, self.deck)
         return mcts_tree.best_move(self.mcts_iterations)

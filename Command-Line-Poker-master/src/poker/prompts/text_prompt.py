@@ -9,6 +9,17 @@ from src.poker.table import Table
 from src.poker.utils.io_utils import clear_screen
 
 
+def show_cards(cards):
+    """Display any cards.
+    Args:
+         (list): the cards
+    """
+    str_cards = []
+    for card in cards:
+        str_cards.append(str(card))
+    str_cards = '  '.join(str_cards)
+    print(f'{str_cards}')
+
 def prompt_for_name() -> str:
     """Prompts user for their name."""
     clear_screen()

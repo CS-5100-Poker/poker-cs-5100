@@ -13,6 +13,12 @@ class Deck:
         self.cards = []
         self.refill()
 
+    def copy(self):
+        new_deck = Deck()
+        new_deck.cards = self.cards.copy()
+        new_deck.refill()
+        return new_deck
+
     def refill(self) -> None:
         """Refills deck with 52 standard playing cards."""
         suits = ['C', 'D', 'H', 'S']

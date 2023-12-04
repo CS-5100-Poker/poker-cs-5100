@@ -29,6 +29,8 @@ class Game:
         self.short_pause = 1.0
         self.pause = 2.0
         self.long_pause = 3.0
+        self.agent_name = "Agent"
+        self.show_table = True
         self.setup()
 
     def play(self) -> None:
@@ -55,7 +57,7 @@ class Game:
 
     def create_players(self, num_computer, starting_chips) -> None:
         playing_style1 = random.choice(list(ComputerPlayingStyle))
-        human = Computer("Agent", 'MCTS')
+        human = Computer(self.agent_name, playing_style1)
         self.players.append(human)
         names = ['Homer', 'Bart', 'Lisa', 'Marge', 'Milhouse', 'Moe', 'Maggie', 'Nelson', 'Ralph']
         computer_names = [n for n in names if n != human.name]
@@ -259,14 +261,17 @@ class Game:
                 betting_index += 1
                 continue
             self.table.update_raise_amount(self.phase)
-
-            game_state = PokerGameState(betting_player, self, self.table.last_bet)
-            print(f"GAME Game state visits: {game_state.visits}")
-            mcts = MCTSAgent()
-
-            print("MCTS CHOOSING BEST ACTION...")
-            move = mcts.choose_action(game_state, betting_player)
-            print(f"MCTS HAS CHOSEN BEST ACTION: {move}")
+            if betting_player.name is self.agent_name:
+                players = (list(map(lambda p: p.copy(), self.get_active_players())))
+                game_state = PokerGameState(betting_index % len(active_players), self, self.table.last_bet,
+                                            self.table.raise_amount, players)
+                mcts = MCTSAgent(game_state, self.deck.copy())
+                print("MCTS CHOOSING BEST ACTION...")
+                move = mcts.choose_action(betting_index % len(active_players))
+                print(f"MCTS HAS CHOSEN BEST ACTION: {move}")
+            else:
+                move = betting_player.choose_next_move(self.table.raise_amount, self.table.num_times_raised,
+                                                       self.table.last_bet)
             self.table.take_bet(betting_player, move)
             text_prompt.show_player_move(betting_player, move, self.pause, betting_player.bet)
             if move is BettingMove.RAISED or move is BettingMove.BET:
@@ -278,7 +283,6 @@ class Game:
                         person.is_locked = True
             elif move is BettingMove.ALL_IN:
                 pass
-            # if move is BettingMove.FOLDED and betting_player.is_human:
             if move is BettingMove.FOLDED and isinstance(betting_player, Human):
                 self.set_game_speed(is_fast=True)
             betting_player.is_locked = True
@@ -383,57 +387,3 @@ class Game:
 
     def get_active_players(self) -> list[Player]:
         return [player for player in self.players if player.is_in_game]
-
-    def apply_action(self, player, action):
-        if action == BettingMove.FOLDED:
-            player.fold()  # Mark the player as folded
-        elif action == BettingMove.CALLED:
-            call_amount = self.table.current_bet - player.current_bet
-            player.chips -= call_amount
-            self.table.pot += call_amount
-            player.current_bet = self.table.current_bet
-        elif action == BettingMove.RAISED:
-            raise_amount = ...  # Determine the raise amount based on game rules
-            player.chips -= raise_amount
-            self.table.pot += raise_amount
-            self.table.current_bet += raise_amount
-            player.current_bet = self.table.current_bet
-        elif action == BettingMove.ALL_IN:
-            all_in_amount = player.chips
-            player.chips = 0
-            self.table.pot += all_in_amount
-            player.current_bet += all_in_amount
-            player.is_all_in = True
-
-        self.update_player_status(player)
-        self.update_round_status()
-
-    def advance_to_next_round(self):
-        if self.phase == Phase.PREFLOP:
-            self.phase = Phase.FLOP
-            self.deal_community(3)
-        elif self.phase == Phase.FLOP:
-            self.phase = Phase.TURN
-            self.deal_community(1)
-        elif self.phase == Phase.TURN:
-            self.phase = Phase.RIVER
-            self.deal_community(1)
-        elif self.phase == Phase.RIVER:
-            self.determine_winners()
-            self.reset_for_next_round()
-
-    def update_turn(self):
-        active_players = self.get_active_players()
-        current_index = active_players.index(self.current_player)
-        next_index = (current_index + 1) % len(active_players)
-        self.current_player = active_players[next_index]
-
-        while self.current_player.has_folded or self.current_player.is_all_in:
-            next_index = (next_index + 1) % len(active_players)
-            self.current_player = active_players[next_index]
-
-    def handle_game_over(self):
-        if self.check_game_over():  # Assuming this method checks if the game is over
-            self.determine_winners()
-            self.distribute_pot()
-            self.reset_game()
