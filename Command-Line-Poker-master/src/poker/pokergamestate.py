@@ -1,399 +1,96 @@
-from __future__ import annotations
+import copy
 
-import random
-
-from .deck import Deck
 from .enums.betting_move import BettingMove
-from .enums.computer_playing_style import ComputerPlayingStyle
-from .enums.phase import Phase
-from .players.computer import Computer
-from .players.human import Human
-from .players.player import Player
-from .prompts import text_prompt
-from .table import Table
-from .utils import hand_ranking_utils
-from .utils import io_utils
+from .prompts.text_prompt import show_table
 
 
 class PokerGameState:
-    """Control center of the game."""
+    def __init__(self, curr_player, game, table_last_best: int, visits=0):
+        self.game = game
+        self.current_player = curr_player
+        self.our_hand = curr_player.hand
+        self.last_bet = table_last_best
+        self.winnings = -table_last_best
+        self.visits = visits
 
-    def __init__(self):
-        self.phase = Phase.PREFLOP
-        self.deck = Deck()
-        self.players = []
-        self.dealer = None
-        self.table = Table()
-        self.short_pause = 1.0
-        self.pause = 2.0
-        self.long_pause = 3.0
-        self.setup()
+    def max_player_turn(self):
+        return True
 
-    def play(self) -> None:
-        """Runs the main loop of the game."""
-        while True:
-            self.reset_for_next_round()
-            for phase in Phase:
-                self.phase = phase
-                self.deal_cards()
-                self.run_round_of_betting()
-                if self.check_hand_over():
-                    break
-            self.determine_winners()
-            self.table.hands_played += 1
-            if self.check_game_over():
-                break
+    def get_legal_actions(self):
+        legal_actions = []
+        current_bet = self.game.current_bet
+        player_chips = self.current_player.chips
 
-    def setup(self) -> None:
-        """Sets up the game before any rounds are run."""
-        num_computer_players = 1
-        starting_chips = 999999
-        self.create_players(num_computer_players, starting_chips)
-        self.table.big_blind = 19999
-
-    def create_players(self, num_computer, starting_chips) -> None:
-        playing_style1 = random.choice(list(ComputerPlayingStyle))
-        human = Computer("Agent", playing_style1)
-        self.players.append(human)
-        names = ['Homer', 'Bart', 'Lisa', 'Marge', 'Milhouse', 'Moe', 'Maggie', 'Nelson', 'Ralph']
-        computer_names = [n for n in names if n != human.name]
-        random.shuffle(computer_names)
-        for _ in range(num_computer):
-            playing_style = random.choice(list(ComputerPlayingStyle))
-            computer = Computer(computer_names.pop(), playing_style)
-            self.players.append(computer)
-        for player in self.players:
-            player.chips = starting_chips
-
-    def reset_for_next_round(self) -> None:
-        """Gets players, table, and deck ready to play another hand."""
-        active_players = self.get_active_players()
-        # if any(player.is_human for player in active_players):
-        if any(isinstance(player, Human) for player in active_players):
-            self.set_game_speed(is_fast=False)
+        if current_bet == 0:
+            legal_actions.append(BettingMove.CHECKED)
         else:
-            self.set_game_speed(is_fast=True)
-        self.reset_players()
-        self.reset_table()
-        self.reset_deck()
+            if player_chips >= current_bet:
+                legal_actions.append(BettingMove.CALLED)
 
-    def reset_players(self) -> None:
-        for player in self.players:
-            player.reset()
-        self.assign_positions()
+        if player_chips > current_bet:
+            legal_actions.append(BettingMove.RAISED)
 
-    def reset_table(self) -> None:
-        active_players = self.get_active_players()
-        self.table.reset(active_players)
-        if self.table.check_increase_big_blind():
-            text_prompt.clear_screen()
-            text_prompt.show_table(self.players, self.table)
-            text_prompt.show_blind_increase(self.table.big_blind, self.long_pause)
+        if player_chips > 0:
+            legal_actions.append(BettingMove.FOLDED)
 
-    def reset_deck(self) -> None:
-        self.deck.refill()
-        self.deck.shuffle()
-        text_prompt.clear_screen()
-        text_prompt.show_shuffling(self.pause)
+        if current_bet > player_chips > 0:
+            legal_actions.append(BettingMove.ALL_IN)
 
-    def set_game_speed(self, is_fast: bool) -> None:
-        pass
-        if is_fast:
-            self.short_pause = 0.5
-            self.pause = 1.0
-            self.long_pause = 1.5
-        else:
-            self.short_pause = 1.0
-            self.pause = 2.0
-            self.long_pause = 3.0
+        return legal_actions
 
-    def assign_positions(self) -> None:
-        """Assigns the position of the players.
+    def get_successor_state(self, player, action):
+        new_state = copy.deepcopy(self)  # Create a deep copy of the current state
+        new_state.apply_action(player, action)
 
-        Definitions:
-            first act = the player who bets first
-            dealer = the player who will bet last
-            small blind = the player to the left of the dealer
-            big blind = the player to the left of the small blind
-        """
-        for player in self.get_active_players():
-            player.is_SB = False
-            player.is_BB = False
-        if self.table.hands_played == 0:
-            self.determine_positions_randomly()
-        else:
-            self.shift_positions_left()
+        if new_state.is_round_over():
+            new_state.advance_to_next_round()  # Deal new community cards if necessary
 
-    def determine_positions_randomly(self) -> None:
-        active_players = self.get_active_players()
-        dealer_index = random.randrange(0, len(active_players))
-        active_players[dealer_index].is_dealer = True
-        self.dealer = active_players[dealer_index]
-        # In 2 player poker, the dealer is SB and acts first pre-flop
-        if len(active_players) == 2:
-            active_players[dealer_index].is_SB = True
-            active_players[(dealer_index + 1) % len(active_players)].is_BB = True
-        else:
-            active_players[(dealer_index + 2) % len(active_players)].is_BB = True
-            active_players[(dealer_index + 1) % len(active_players)].is_SB = True
+        new_state.update_turn()  # Move to the next player
 
-    def shift_positions_left(self) -> None:
-        active_players = self.get_active_players()
-        old_dealer_index = [player is self.dealer for player in self.players].index(True)
-        while True:
-            old_dealer_index += 1
-            player_to_left = self.players[old_dealer_index % len(self.players)]
-            if player_to_left in active_players:
-                self.dealer = player_to_left
-                player_to_left.is_dealer = True
-                new_dealer_index = next(i for i, player in enumerate(active_players) if player.is_dealer)
-                # in 2 player poker, the dealer is SB and acts first pre-flop
-                if len(active_players) == 2:
-                    active_players[new_dealer_index].is_SB = True
-                    active_players[(new_dealer_index + 1) % len(active_players)].is_BB = True
-                else:
-                    active_players[(new_dealer_index + 2) % len(active_players)].is_BB = True
-                    active_players[(new_dealer_index + 1) % len(active_players)].is_SB = True
-                break
+        if new_state.is_game_over():
+            new_state.handle_game_over()  # Determine winner, distribute pot, etc.
 
-    def deal_cards(self) -> None:
-        """Deals cards to the hold and the community."""
-        if self.phase is Phase.PREFLOP:
-            text_prompt.show_table(self.players, self.table)
-            text_prompt.show_phase_change_alert(self.phase, self.dealer.name, self.long_pause)
-            self.deal_hole()
-        elif self.phase is Phase.FLOP:
-            text_prompt.show_phase_change_alert(self.phase, self.dealer.name, self.long_pause)
-            self.deal_community(3)
-        else:
-            text_prompt.show_phase_change_alert(self.phase, self.dealer.name, self.long_pause)
-            self.deal_community(1)
-        text_prompt.show_table(self.players, self.table)
+        print(f"POKERGAMESTATE: Game state visits: {new_state.visits}")
 
-    def deal_hole(self) -> None:
-        """Deals two cards to each player.
+        print("MCTS Table Iteration ")
+        show_table(new_state.game.players, new_state.game.table)
 
-        In poker, you deal one card to each player at a time.
-        """
-        text_prompt.show_table(self.players, self.table, self.short_pause)
-        text_prompt.show_dealing_hole(self.dealer.name, self.pause)
-        for i in range(2):
-            for player in self.get_active_players():
-                card = self.deck.deal(1)
-                player.hand.extend(card)
+        return new_state
 
-    def deal_community(self, n: int) -> None:
-        """Deals cards to the community.
 
-        In poker, a card is burned before dealing to the community.
-
-        Args:
-            n: The number of cards to deal to the community
-        """
-        self.deck.burn()
-        cards = self.deck.deal(n)
-        self.table.community.extend(cards)
-
-    def run_round_of_betting(self):
-        """Runs a round of betting."""
-        self.table.num_times_raised = 0
-        active_players = self.get_active_players()
-        if self.phase is Phase.PREFLOP:
-            self.run_small_blind_bet()
-            self.run_big_blind_bet()
-        first_act = self.get_index_first_act()
-        # End round of betting when all but one player fold or when all unfolded players have locked in their bets
-        self.bet_util_all_locked_in(first_act, active_players)
-        for player in active_players:
-            if not player.is_folded and not player.is_all_in:
-                player.is_locked = False
-        self.table.calculate_side_pots(active_players)
-        text_prompt.show_table(self.players, self.table)
-
-    def run_small_blind_bet(self) -> None:
-        player = next(player for player in self.players if player.is_SB)
-        text_prompt.show_bet_blind(player.name, 'small', self.pause)
-        wentAllIn = self.table.take_small_blind(player)
-        if wentAllIn:
-            text_prompt.show_player_move(player, BettingMove.ALL_IN, self.pause)
-        text_prompt.show_table(self.players, self.table)
-
-    def run_big_blind_bet(self) -> None:
-        player = next(player for player in self.players if player.is_BB)
-        text_prompt.show_bet_blind(player.name, 'big', self.pause)
-        wentAllIn = self.table.take_big_blind(player)
-        if wentAllIn:
-            text_prompt.show_player_move(player, BettingMove.ALL_IN, self.pause)
-        text_prompt.show_table(self.players, self.table)
-
-    def get_index_first_act(self) -> int:
-        """Determines the index of the first act.
-
-        Returns:
-            The index of the first act
-        """
-        active_players = self.get_active_players()
-        if len(active_players) == 2:
-            if active_players[0].is_dealer:
-                return 0
-            else:
-                return 1
-        if self.phase is Phase.PREFLOP:
-            BB_index = next(i for i, player in enumerate(active_players) if player.is_BB)
-            return (BB_index + 1) % len(active_players)
-        else:
-            dealer_index = next(i for i, player in enumerate(active_players) if player.is_dealer)
-            return (dealer_index + 1) % len(active_players)
-
-    def bet_util_all_locked_in(self, first_act: int, active_players: list[Player]) -> None:
-        betting_index = first_act
-        while True:
-            if all(player.is_locked or player.is_all_in for player in active_players):
-                break
-            if [player.is_folded for player in active_players].count(False) == 1:
-                break
-            betting_player = active_players[betting_index % len(active_players)]
-            if betting_player.is_folded or betting_player.is_all_in:
-                betting_index += 1
-                continue
-            self.table.update_raise_amount(self.phase)
-            move = betting_player.choose_next_move(self.table.raise_amount, self.table.num_times_raised,
-                                                   self.table.last_bet)
-            self.table.take_bet(betting_player, move)
-            text_prompt.show_player_move(betting_player, move, self.pause, betting_player.bet)
-            if move is BettingMove.RAISED or move is BettingMove.BET:
-                for active_player in active_players:
-                    if not active_player.is_folded:
-                        active_player.is_locked = False
-                for person in active_players:
-                    if person.is_all_in:
-                        person.is_locked = True
-            elif move is BettingMove.ALL_IN:
-                pass
-            # if move is BettingMove.FOLDED and betting_player.is_human:
-            if move is BettingMove.FOLDED and isinstance(betting_player, Human):
-                self.set_game_speed(is_fast=True)
-            betting_player.is_locked = True
-            betting_index += 1
-            text_prompt.show_table(self.players, self.table)
-
-    def check_hand_over(self) -> bool:
-        """Checks if the current hand is over.
-
-        Returns:
-            True if hand is over, False otherwise.
-        """
-        players_able_to_bet = 0
-        for player in self.get_active_players():
-            if not player.is_all_in and not player.is_folded:
-                players_able_to_bet += 1
-        return players_able_to_bet < 2
-
-    def determine_winners(self):
-        """Determine the winners of each pot and award them their chips."""
-        if self.table.pots[-1][0] == 0:
-            self.table.pots = self.table.pots[:-1]
-        unfolded_players = [player for player in self.get_active_players() if not player.is_folded]
-        if len(unfolded_players) == 1:
-            winnings = 0
-            for pot in self.table.pots:
-                winnings += pot[0]
-            winner = unfolded_players[0]
-            winner.chips += winnings
-            text_prompt.show_table(self.players, self.table)
-            text_prompt.show_default_winner_fold(winner.name)
-        else:
-            # If only 1 player is eligible for last side pot (i.e. other players folded/all-in), award player that pot
-            players_eligible_last_pot = []
-            for player in self.table.pots[-1][1]:
-                if not player.is_folded:
-                    players_eligible_last_pot.append(player)
-            if len(players_eligible_last_pot) == 1:
-                hand_winner = players_eligible_last_pot[0]
-                text_prompt.show_table(self.players, self.table)
-                text_prompt.show_default_winner_eligibility(hand_winner.name, len(self.table.pots) - 1)
-                hand_winner.chips += self.table.pots[-1][0]
-                self.table.pots = self.table.pots[:-1]
-            while len(self.table.community) < 5:
-                self.table.community.extend(self.deck.deal(1))
-            self.showdown()
-
-    def showdown(self):
-        """Runs the showdown phase."""
-        text_prompt.show_table(self.players, self.table)
-
-        # Need to fix this
-        # text_prompt.show_phase_change_alert('Showdown', self.dealer, self.pause)
-
-        # Divvy chips to the winner(s) of each pot/side pot
-        for i in reversed(range(len(self.table.pots))):
-            showdown_players = []
-            for player in self.table.pots[i][1]:
-                if not player.is_folded:
-                    showdown_players.append(player)
-            hand_winners = hand_ranking_utils.determine_showdown_winner(showdown_players, self.table.community)
-            for winner in hand_winners:
-                winner.chips += int(self.table.pots[i][0] / len(hand_winners))
-            text_prompt.show_showdown_results(self.players, self.table, hand_winners, showdown_players, pot_num=i)
-
-    def check_game_over(self):
-        """Checks if the game is over.
-
-        If the game is not over (i.e. all but one player has no chips), ask the user if they would
-        like to continue the game.
-
-        Returns:
-            bool: True if the game is over, False otherwise.
-        """
-        for player in self.get_active_players():
-            if player.chips == 0:
-                player.is_in_game = False
-        active_players = self.get_active_players()
-        if len(active_players) == 1:
-            text_prompt.show_table(self.players, self.table)
-            text_prompt.show_game_winners(self.players, [active_players[0].name])
-            return True
-        else:
-            while True:
-                text_prompt.clear_screen()
-                user_choice = io_utils.input_no_return(
-                    "Continue on to next hand? Press (enter) to continue or (n) to stop.   ")
-                if 'n' in user_choice.lower():
-                    max_chips = max(self.get_active_players(), key=lambda player: player.chips).chips
-                    winners_names = [player.name for player in self.get_active_players() if player.chips == max_chips]
-                    text_prompt.show_table(self.players, self.table)
-                    text_prompt.show_game_winners(self.players, winners_names)
-                    return True
-                return False
-
-    def getLegalActions(self):
-        return [BettingMove.FOLDED, BettingMove.RAISED, BettingMove.CALLED, BettingMove.ALL_IN]
-
-    def getSuccessorState(self, playerIndex, action):
-        if self.check_game_over():
-            raise Exception("Game over, no successor state")
-
-        state = PokerGameState(self)
-        player = state.players[playerIndex]
-        active_players = state.get_active_players()
-
-        state.table.take_bet(player, action) # take the best
-
-        #Below might not be needed FROM HERE
-        if move is BettingMove.RAISED or move is BettingMove.BET:
-            for active_player in active_players: # the remaining player is defin
-                if not active_player.is_folded:
-                    active_player.is_locked = False
-            for person in active_players:
-                if person.is_all_in:
-                    person.is_locked = True
-        ## UNTIL HERE
+        # check if "locked in" - everyone has called/checked
+            # deal cards, update the community cards
+            # or, we show cards if the community has 5
+        # else
+            # return
 
         return state
 
+    def incrementVisits(self):
+        self.visits += 1
+        print(f"New visit value = {self.visits}")
 
 
+    def eval_game_state(self):
+        community = self.game.table.community
+        currentHand = self.our_hand
+        if len(community) == 0:
+            return self.current_player.best_hand_score
+        # calculate based on our hand, and dealt 5
+        elif len(community) == 3:
+            return self.current_player.best_hand_score + 1
+        # calculate based on our hand, and community 3 + dealt 2
+        elif len(community) == 4:
+            return self.current_player.best_hand_score + 2
+        # calculate based on our hand, community 4, and dealt 1
+        else:  # all cards are visible
+            return self.current_player.best_hand_score + 3
+        # determine the value of our hands
 
-
-    def get_active_players(self) -> list[Player]:
-        return [player for player in self.players if player.is_in_game]
+    def is_card_draw(self):  # card_drawn if all players have matched bets, or are all in or folded
+        active_players = self.game.get_active_players()
+        if all(player.is_locked or player.is_all_in for player in active_players):
+            return True
+        if [player.is_folded for player in active_players].count(False) == 1:
+            return True
+        return False

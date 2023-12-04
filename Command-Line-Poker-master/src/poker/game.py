@@ -3,6 +3,7 @@ from __future__ import annotations
 import random
 
 from .deck import Deck
+from .pokergamestate import PokerGameState
 from .enums.betting_move import BettingMove
 from .enums.computer_playing_style import ComputerPlayingStyle
 from .enums.phase import Phase
@@ -13,9 +14,8 @@ from .prompts import text_prompt
 from .table import Table
 from .utils import hand_ranking_utils
 from .utils import io_utils
+from .agents.mcts_agent import MCTSAgent
 
-from players.mcts_agent import MCTSAgent
-from enums.computer_playing_style import ComputerPlayingStyle
 
 class Game:
     """Control center of the game."""
@@ -29,6 +29,8 @@ class Game:
         self.short_pause = 1.0
         self.pause = 2.0
         self.long_pause = 3.0
+        self.agent_name = "Agent"
+        self.show_table = True
         self.setup()
 
     def play(self) -> None:
@@ -55,7 +57,7 @@ class Game:
 
     def create_players(self, num_computer, starting_chips) -> None:
         playing_style1 = random.choice(list(ComputerPlayingStyle))
-        human = Computer("Agent", 'MCTS')
+        human = Computer(self.agent_name, playing_style1)
         self.players.append(human)
         names = ['Homer', 'Bart', 'Lisa', 'Marge', 'Milhouse', 'Moe', 'Maggie', 'Nelson', 'Ralph']
         computer_names = [n for n in names if n != human.name]
@@ -259,8 +261,17 @@ class Game:
                 betting_index += 1
                 continue
             self.table.update_raise_amount(self.phase)
-            move = betting_player.choose_next_move(self.table.raise_amount, self.table.num_times_raised,
-                                                   self.table.last_bet)
+            if betting_player.name is self.agent_name:
+                players = (list(map(lambda p: p.copy(), self.get_active_players())))
+                game_state = PokerGameState(betting_index % len(active_players), self, self.table.last_bet,
+                                            self.table.raise_amount, players)
+                mcts = MCTSAgent(game_state, self.deck.copy())
+                print("MCTS CHOOSING BEST ACTION...")
+                move = mcts.choose_action(betting_index % len(active_players))
+                print(f"MCTS HAS CHOSEN BEST ACTION: {move}")
+            else:
+                move = betting_player.choose_next_move(self.table.raise_amount, self.table.num_times_raised,
+                                                       self.table.last_bet)
             self.table.take_bet(betting_player, move)
             text_prompt.show_player_move(betting_player, move, self.pause, betting_player.bet)
             if move is BettingMove.RAISED or move is BettingMove.BET:
@@ -272,7 +283,6 @@ class Game:
                         person.is_locked = True
             elif move is BettingMove.ALL_IN:
                 pass
-            # if move is BettingMove.FOLDED and betting_player.is_human:
             if move is BettingMove.FOLDED and isinstance(betting_player, Human):
                 self.set_game_speed(is_fast=True)
             betting_player.is_locked = True
@@ -347,6 +357,13 @@ class Game:
         Returns:
             bool: True if the game is over, False otherwise.
         """
+        countNotFolded = 0
+        for player in self.get_active_players():
+            if not player.is_folded:
+                countNotFolded += 1
+        if countNotFolded <= 1:
+            return True
+
         for player in self.get_active_players():
             if player.chips == 0:
                 player.is_in_game = False
