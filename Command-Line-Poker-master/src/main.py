@@ -17,7 +17,9 @@ from src.poker.pokergamestate import Game
 # TODO: Look for bugs
 # TODO: Expand on current functionality
 def main():
-    Game().play()
+    game = Game(3, True)  # number of 'rounds' in a game (before resetting coins)
+    game.play(2)  # number or 'rounds' (times that betting is reset)
+    print(game.net_wins)
 
 
 if __name__ == '__main__':

@@ -18,6 +18,18 @@ class Table:
         self.raise_amount = 0
         self.num_times_raised = 0
 
+    def copy(self):
+        new_table = Table()
+        new_table.hands_played = self.hands_played
+        new_table.community = self.community.copy()
+        new_table.pots = self.pots.copy()
+        new_table.pot_transfers = self.pot_transfers.copy()
+        new_table.last_bet = self.last_bet
+        new_table.big_blind = self.big_blind
+        new_table.raise_amount = self.raise_amount
+        new_table.num_times_raised = self.num_times_raised
+        return new_table
+
     def reset(self, active_players: list[Player]) -> None:
         """Resets the table for the next hand to be played."""
         self.community = []

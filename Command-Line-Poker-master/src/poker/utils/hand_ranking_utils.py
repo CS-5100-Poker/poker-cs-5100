@@ -41,16 +41,21 @@ handrank_int_str_dict = {
     1: 'High Card',
 }
 
+
 def estimate_hand(hand, deck, community):
+    if len(hand) == 0:
+        hand = deck.deal(2)
     starting_length = len(deck.cards)
     deal_num = 5 - len(community)
-    worst_best_score = 99999
+    worst_best_score = 999999999999999999
     worst_best_combo = []
 
-    while len(deck.cards) > starting_length % deal_num:
+    should_deal = deal_num == 0 or (deal_num != 0 and len(deck.cards) > starting_length % deal_num)
+
+    while should_deal:
         random_remaining = deck.deal(deal_num)
         combos = combinations(hand + community + random_remaining, 5)
-        best_score_so_far = -9999
+        best_score_so_far = -999999999999999999
         best_combo_so_far = []
         for combo in combos:
             raw_score = score_hand(combo)
@@ -61,8 +66,9 @@ def estimate_hand(hand, deck, community):
         if best_score_so_far < worst_best_score:
             worst_best_score = best_score_so_far
             worst_best_combo = best_combo_so_far
+        should_deal = deal_num != 0 and len(deck.cards) > starting_length % deal_num
 
-    show_cards(worst_best_combo)
+    #show_cards(worst_best_combo)
 
     return worst_best_score, worst_best_combo
 
