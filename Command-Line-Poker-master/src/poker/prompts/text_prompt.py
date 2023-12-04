@@ -143,6 +143,18 @@ def show_community(community):
     padding = ' '
     print(f'{padding:>9}COMMUNITY:  {community_str}')
 
+def show_cards(cards):
+    """Display any cards.
+
+    Args:
+         (list): the cards
+    """
+    str_cards = []
+    for card in cards:
+        str_cards.append(str(card))
+    str_cards = '  '.join(str_cards)
+    print(f'{str_cards}')
+
 
 def show_blinds(table):
     """ Display small and big blind amounts.
