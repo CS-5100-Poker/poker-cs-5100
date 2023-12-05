@@ -36,6 +36,7 @@ class MCTSNode:
         return max(self.children, key=lambda node: node.ucb1())
 
     def expand(self):
+        print(f"EXPANDING...")
         action = self.untried_actions.pop()
         new_state = self.game_state.get_successor_state(self.player_index, action, self.deck)
         child_node = MCTSNode(self.player_index, new_state, self, action)
@@ -45,11 +46,12 @@ class MCTSNode:
     def simulate(self):
         current_state = self.game_state
         index_iteration = self.player_index
+        players = current_state.players.copy()
         while not current_state.game.check_game_over():
             possible_moves = current_state.get_legal_actions()
             action = random.choice(possible_moves)
             current_state = current_state.get_successor_state(index_iteration, action, self.deck)
-            index_iteration = (index_iteration + 1) % len(current_state.players)
+            index_iteration = (index_iteration + 1) % len(players)
         return current_state.eval_game_state()
 
 class MCTSTree:
@@ -73,7 +75,8 @@ class MCTSTree:
             node = node.parent
 
     def best_move(self, simulations_number):
-        for _ in range(simulations_number):
+        for i in range(simulations_number):
+            print(f"SIMULATION NUMBER {i}")
             promising_node = self.select_promising_node()
             if not promising_node.game_state.game.check_game_over():
                 self.expand_node(promising_node)

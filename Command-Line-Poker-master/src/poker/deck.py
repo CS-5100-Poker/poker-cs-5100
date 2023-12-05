@@ -16,7 +16,7 @@ class Deck:
     def copy(self):
         new_deck = Deck()
         new_deck.cards = self.cards.copy()
-        new_deck.refill()
+        #new_deck.refill()
         return new_deck
 
     def refill(self) -> None:

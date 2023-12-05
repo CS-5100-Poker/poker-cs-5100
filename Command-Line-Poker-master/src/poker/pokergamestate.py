@@ -42,16 +42,14 @@ class PokerGameState:
     def get_successor_state(self, player_index, action, deck):
         player = self.players[player_index]
 
-        if self.game.show_table:
-            print(f"EVALUATE: Player {player.name}; {action}")
+        #if self.game.show_table:
+        print(f"EVALUATE: Player {player.name}; {action}")
 
         new_state = PokerGameState(player_index, self.game, self.last_bet, self.raise_amount, self.players)
         new_state.apply_action(player, action, deck)
 
-        new_state.max_player_turn = not self.max_player_turn
-
-        if self.game.show_table:
-            show_table(new_state.players, new_state.table)
+        # if self.game.show_table:
+        #     show_table(new_state.players, new_state.table)
 
         return new_state
 
@@ -92,9 +90,9 @@ class PokerGameState:
                 print(f"pots {self.table.pots[0][0]} added {call_amount}")
             self.table.pots[0][0] += call_amount
             self.raise_amount = self.table.last_bet
-            print(f"{player.name}...locking ON CALL from {player.is_locked}")
+            # print(f"{player.name}...locking ON CALL from {player.is_locked}")
             player.is_locked = True
-            print(f"to {player.is_locked}")
+            # print(f"to {player.is_locked}")
             self.check_and_update_round(deck)
         elif action == BettingMove.RAISED:
             raise_amount = 1000  # Determine the raise amount based on game rules
@@ -104,26 +102,26 @@ class PokerGameState:
             self.table.last_bet += raise_amount
             self.raise_amount = self.table.last_bet
             for other_player in self.players:
-                print(f"{other_player.name}...")
+                # print(f"{other_player.name}...")
                 if other_player.name != player.name and not other_player.is_folded and not other_player.is_all_in:
-                    print(f"...unlocking ON RAISE from {player.is_locked}")
+                    # print(f"...unlocking ON RAISE from {player.is_locked}")
                     player.is_locked = False
-                    print(f"to {player.is_locked}")
+                    # print(f"to {player.is_locked}")
                     self.check_and_update_round(deck)
                 else:
-                    print(f"...locking on RAISE from {player.is_locked}")
+                    # print(f"...locking on RAISE from {player.is_locked}")
                     player.is_locked = True
-                    print(f"to {player.is_locked}")
+                    # print(f"to {player.is_locked}")
                     self.check_and_update_round(deck)
         elif action == BettingMove.ALL_IN:
             all_in_amount = player.chips
             player.chips = 0
             self.table.pots[0][0] += all_in_amount
             self.raise_amount += all_in_amount
-            print(f"{player.name}...locking on ALL IN from {player.is_locked}")
+            # print(f"{player.name}...locking on ALL IN from {player.is_locked}")
             player.is_all_in = True
             player.is_locked = True
-            print(f"to {player.is_locked}")
+            # print(f"to {player.is_locked}")
             self.check_and_update_round(deck)
 
     def check_and_update_round(self, deck):
