@@ -45,19 +45,23 @@ class Game:
             print(f"GAMES REMAINING: {games_total}")
             rounds_total = self.remaining_rounds
             self.reset_for_next_round()
-            #while rounds_total != 0:
-            for phase in Phase:
-                self.phase = phase
-                self.deal_cards()
-                self.run_round_of_betting()
-                if self.check_hand_over():
-                    end_chips = self.get_agent_chips()
-                    self.net_wins.append(end_chips - self.start_chips)
-                    print(f"ROUNDS LEFT: {rounds_total}")
-                    break
-            self.determine_winners()
-            self.table.hands_played += 1
-            #rounds_total -= 1
+            while rounds_total != 0:
+                for phase in Phase:
+                    self.phase = phase
+                    self.deal_cards()
+                    self.run_round_of_betting()
+                    if self.check_hand_over():
+                        # end_chips = self.get_agent_chips()
+                        # self.net_wins.append(end_chips - self.start_chips)
+                        # print(f"ROUNDS LEFT: {rounds_total}")
+                        break
+                end_chips = self.get_agent_chips()
+                self.net_wins.append(end_chips - self.start_chips)
+                print(f"ROUNDS LEFT: {rounds_total}")
+                # break
+                self.determine_winners()
+                self.table.hands_played += 1
+                rounds_total -= 1
             if self.check_game_over():
                 break
             #games_total -= 1
@@ -66,9 +70,9 @@ class Game:
     def setup(self) -> None:
         """Sets up the game before any rounds are run."""
         num_computer_players = 1
-        starting_chips = 999999
+        starting_chips = 100000
         self.create_players(num_computer_players, starting_chips)
-        self.table.big_blind = 19999
+        self.table.big_blind = 2000
 
     def create_players(self, num_computer, starting_chips) -> None:
         playing_style1 = random.choice(list(ComputerPlayingStyle))
@@ -288,7 +292,7 @@ class Game:
                 continue
             self.table.update_raise_amount(self.phase)
             if betting_player.name is self.agent_name:
-                game_state = PokerGameState(betting_index % len(active_players), self, self.table.last_bet, self.table.raise_amount)
+                game_state = PokerGameState(betting_index % len(active_players), self, self.deck.copy(), self.table.last_bet, self.table.raise_amount)
                 max_action_value = -9999
                 expectiminimax = Expectiminimax()
                 max_action = None
@@ -401,6 +405,8 @@ class Game:
         Returns:
             bool: True if the game is over, False otherwise.
         """
+        end_chips = self.get_agent_chips()
+        print(f"NET: {end_chips - self.start_chips}")
         for player in self.get_active_players():
             if player.chips <= 0:
                 player.is_in_game = False
@@ -414,8 +420,8 @@ class Game:
                 if self.show_table:
                     text_prompt.clear_screen()
                 user_choice = io_utils.input_no_return(
-                     "Continue on to next hand? Press (enter) to continue or (n) to stop.   ")
-                if 'n' in user_choice.lower():
+                      "Continue on to next hand? Press (enter) to continue or (n) to stop.   ")
+                if 'n' in user_choice.lower(): # if self.remaining_rounds != 0:
                     max_chips = max(self.get_active_players(), key=lambda player: player.chips).chips
                     winners_names = [player.name for player in self.get_active_players() if player.chips == max_chips]
                     if self.show_table:
@@ -435,7 +441,7 @@ class Game:
         return [player for player in self.players if player.is_in_game]
 
 class PokerGameState:
-    def __init__(self, curr_player_index, game, table_last_best: int, raise_amount: int):
+    def __init__(self, curr_player_index, game, deck, table_last_best: int, raise_amount: int):
         self.game = game
         self.players = (list(map(lambda p: p.copy(), self.game.get_active_players())))
         self.table = self.game.table.copy()
@@ -443,6 +449,7 @@ class PokerGameState:
         self.our_hand = self.current_player.hand
         self.last_bet = table_last_best
         self.winnings = -table_last_best
+        self.deck = deck
         self.max_player_turn = True
         self.raise_amount = raise_amount
         self.phase = self.game.phase
@@ -479,7 +486,7 @@ class PokerGameState:
         if self.game.show_table:
             print(f"EVALUATE: Player {player.name}; {action}")
 
-        new_state = PokerGameState(player_index, self.game, self.last_bet, self.raise_amount)
+        new_state = PokerGameState(player_index, self.game, self.deck, self.last_bet, self.raise_amount)
         new_state.apply_action(player, action)
 
         new_state.max_player_turn = not self.max_player_turn
@@ -499,8 +506,7 @@ class PokerGameState:
             currentHand = []
         if self.game.show_table:
             print(f"HAND: {show_cards(currentHand)}")
-        deck_copy = self.game.deck.copy()
-        value, hand = hand_ranking_utils.estimate_hand(currentHand, deck_copy, community)
+        value, hand = hand_ranking_utils.estimate_hand(currentHand, self.deck, community)
         if self.game.show_table:
             print(f"BEST HAND {value}")
         #show_cards(hand)
