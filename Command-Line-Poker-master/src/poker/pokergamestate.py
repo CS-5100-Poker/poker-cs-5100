@@ -301,7 +301,7 @@ class Game:
                     if self.show_table:
                         print(f"AGENT CONSIDERS {action}")
                     next_state = game_state.get_successor_state(betting_index % len(active_players), action)
-                    next_state_value = expectiminimax.expectiminimax(3, next_state, False, betting_index % len(active_players))
+                    next_state_value = expectiminimax.expectiminimax(1, next_state, False, betting_index % len(active_players))
                     if next_state_value > max_action_value:
                         max_action_value = next_state_value
                         max_action = action

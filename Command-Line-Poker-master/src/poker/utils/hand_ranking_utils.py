@@ -44,15 +44,17 @@ handrank_int_str_dict = {
 
 def estimate_hand(hand, deck, community):
     print(f"{len(deck.cards)} cards in deck")
+    eval_deck = deck.copy()
     if len(hand) == 0:
-        hand = deck.deal(2)
+        hand = eval_deck.deal(2)
     starting_length = len(deck.cards)
     deal_num = 5 - len(community)
-    #worst_best_score = 999999999999999999
-    #worst_best_combo = []
 
-    should_deal = deal_num == 0 or (deal_num != 0 and len(deck.cards) > starting_length % deal_num)
-    all_cards = deck.deal(starting_length)
+    if len(community) == 0:
+        return 25719765832.33753, []
+
+    should_deal = deal_num == 0 or (deal_num != 0 and len(eval_deck.cards) > starting_length % deal_num)
+    all_cards = eval_deck.deal(starting_length)
 
     #num_deal = 1 if deal_num == 0 else starting_length // deal_num
     res = []
@@ -60,9 +62,8 @@ def estimate_hand(hand, deck, community):
         deal_combos = combinations(all_cards, deal_num)
         res.extend(deal_combos)
         #print(f"{deal_num} COMBOS OF {len(all_cards)}: {len(res)}")
-        num_deal = sum(1 for _ in res)
+        num_deal = len(res)
     else:
-        deal_combos = []
         num_deal = 1
 
     uniform_probability = 1 / num_deal
