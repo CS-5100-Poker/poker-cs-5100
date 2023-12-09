@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import copy
+
 from src.poker.enums.betting_move import BettingMove
 from src.poker.enums.phase import Phase
 from src.poker.players.player import Player
@@ -21,9 +23,9 @@ class Table:
     def copy(self):
         new_table = Table()
         new_table.hands_played = self.hands_played
-        new_table.community = self.community.copy()
-        new_table.pots = self.pots.copy()
-        new_table.pot_transfers = self.pot_transfers.copy()
+        new_table.community = copy.deepcopy(self.community)
+        new_table.pots = copy.deepcopy(self.pots)
+        new_table.pot_transfers = copy.deepcopy(self.pot_transfers)
         new_table.last_bet = self.last_bet
         new_table.big_blind = self.big_blind
         new_table.raise_amount = self.raise_amount

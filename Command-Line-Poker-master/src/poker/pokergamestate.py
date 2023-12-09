@@ -2,6 +2,7 @@ import copy
 
 from .enums.betting_move import BettingMove
 from .prompts.text_prompt import show_table, show_cards
+from .prompts import text_prompt
 from .enums.phase import Phase
 from .utils.hand_ranking_utils import estimate_hand
 
@@ -51,7 +52,7 @@ class PokerGameState:
         new_state.apply_action(player, action, deck)
 
         # if self.game.show_table:
-        #     show_table(new_state.players, new_state.table)
+        show_table(new_state.players, new_state.table)
 
         return new_state
 
@@ -61,8 +62,8 @@ class PokerGameState:
 
 
     def eval_game_state(self):
-        if self.game.show_table:
-            print("Evaluating...")
+        # if self.game.show_table:
+        print("Evaluating...")
         community = self.table.community
         if self.current_player.name == "Agent":
             currentHand = self.our_hand
@@ -79,9 +80,9 @@ class PokerGameState:
 
     def apply_action(self, player, action, deck):
         if action == BettingMove.FOLDED:
-            print(f"{player.name}...locking ON FOLD from {player.is_locked}")
+            #print(f"{player.name}...locking ON FOLD from {player.is_locked}")
             player.is_locked = True
-            print(f"to {player.is_locked}")
+            #print(f"to {player.is_locked}")
             player.fold()  # Mark the player as folded
             self.check_and_update_round(deck)
         elif action == BettingMove.CALLED:
@@ -150,14 +151,14 @@ class PokerGameState:
 
     def update_turn(self):
         self.max_player_turn = not self.max_player_turn
-        # active_players = self.get_active_players()
-        # current_index = active_players.index(self.current_player)
-        # next_index = (current_index + 1) % len(active_players)
-        # self.current_player = active_players[next_index]
-        #
-        # while self.current_player.has_folded or self.current_player.is_all_in:
-        #     next_index = (next_index + 1) % len(active_players)
-        #     self.current_player = active_players[next_index]
+        active_players = self.game.get_active_players()
+        current_index = active_players.index(self.current_player)
+        next_index = (current_index + 1) % len(active_players)
+        self.current_player = active_players[next_index]
+
+        while self.current_player.has_folded or self.current_player.is_all_in:
+            next_index = (next_index + 1) % len(active_players)
+            self.current_player = active_players[next_index]
 
     def handle_game_over(self):
         if self.check_game_over():  # Assuming this method checks if the game is over
@@ -185,57 +186,42 @@ class PokerGameState:
             return True
         return False
 
-    def apply_action(self, player, action):
-        if action == BettingMove.FOLDED:
-            player.fold()  # Mark the player as folded
-        elif action == BettingMove.CALLED:
-            call_amount = self.table.current_bet - player.current_bet
-            player.chips -= call_amount
-            self.table.pot += call_amount
-            player.current_bet = self.table.current_bet
-        elif action == BettingMove.RAISED:
-            raise_amount = ...  # Determine the raise amount based on game rules
-            player.chips -= raise_amount
-            self.table.pot += raise_amount
-            self.table.current_bet += raise_amount
-            player.current_bet = self.table.current_bet
-        elif action == BettingMove.ALL_IN:
-            all_in_amount = player.chips
-            player.chips = 0
-            self.table.pot += all_in_amount
-            player.current_bet += all_in_amount
-            player.is_all_in = True
+    def check_game_over(self):
+        """Checks if the game is over.
 
-        # self.game.update_player_status(player)
-        # self.game.update_round_status()
+        If the game is not over (i.e. all but one player has no chips), ask the user if they would
+        like to continue the game.
 
-    def advance_to_next_round(self):
-        if self.phase == Phase.PREFLOP:
-            self.phase = Phase.FLOP
-            self.game.deal_community(3)
-        elif self.phase == Phase.FLOP:
-            self.phase = Phase.TURN
-            self.game.deal_community(1)
-        elif self.phase == Phase.TURN:
-            self.phase = Phase.RIVER
-            self.game.deal_community(1)
-        elif self.phase == Phase.RIVER:
-            self.game.determine_winners()
-            self.game.reset_for_next_round()
+        Returns:
+            bool: True if the game is over, False otherwise.
+        """
+        countNotFolded = 0
+        for player in self.players:
+            if not player.is_folded:
+                countNotFolded += 1
+                print(f"Number of Players not folded: {countNotFolded}")
+        if countNotFolded <= 1:
+            return True
 
-    def update_turn(self):
-        active_players = self.game.get_active_players()
-        current_index = active_players.index(self.current_player)
-        next_index = (current_index + 1) % len(active_players)
-        self.current_player = active_players[next_index]
+        for player in self.players:
+            if player.chips == 0:
+                player.is_in_game = False
+        active_players = self.players
+        if len(active_players) == 1:
+            text_prompt.show_table(self.players, self.table)
+            text_prompt.show_game_winners(self.players, [active_players[0].name])
+            return True
+        else:
+            while True:
+                text_prompt.clear_screen()
+                # user_choice = io_utils.input_no_return(
+                #     "Continue on to next hand? Press (enter) to continue or (n) to stop.   ")
+                # if 'n' in user_choice.lower():
+                #     max_chips = max(self.get_active_players(), key=lambda player: player.chips).chips
+                #     winners_names = [player.name for player in self.get_active_players() if player.chips == max_chips]
+                #     text_prompt.show_table(self.players, self.table)
+                #     text_prompt.show_game_winners(self.players, winners_names)
+                #     return True
+                return False
 
-        while self.current_player.has_folded or self.current_player.is_all_in:
-            next_index = (next_index + 1) % len(active_players)
-            self.current_player = active_players[next_index]
-
-    def handle_game_over(self):
-        if self.game.check_game_over():  # Assuming this method checks if the game is over
-            self.game.determine_winners()
-            self.game.distribute_pot()
-            self.game.reset_game()
 

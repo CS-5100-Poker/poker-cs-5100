@@ -1,3 +1,4 @@
+import copy
 import random
 
 from .card import Card
@@ -15,7 +16,7 @@ class Deck:
 
     def copy(self):
         new_deck = Deck()
-        new_deck.cards = self.cards.copy()
+        new_deck.cards = copy.deepcopy(self.cards)
         #new_deck.refill()
         return new_deck
 

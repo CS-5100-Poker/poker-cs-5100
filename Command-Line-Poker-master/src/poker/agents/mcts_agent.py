@@ -1,9 +1,10 @@
+import copy
 from abc import ABC
 import random
 import math
 
 class MCTSNode:
-    def __init__(self, agent_index, game_state, deck, parent=None, move=None):
+    def __init__(self, agent_index, game_state, parent=None, move=None):
         self.game_state = game_state
         self.parent = parent
         self.move = move
@@ -12,7 +13,6 @@ class MCTSNode:
         self.untried_actions = game_state.get_legal_actions()
         self.children = []
         self.player_index = agent_index
-        self.deck = deck
 
     def ucb1(self, exploration_constant=1.41):
         if self.visits == 0:
@@ -35,28 +35,38 @@ class MCTSNode:
     def select_child(self):
         return max(self.children, key=lambda node: node.ucb1())
 
-    def expand(self):
+    def expand(self, deck_copy):
         print(f"EXPANDING...")
         action = self.untried_actions.pop()
-        new_state = self.game_state.get_successor_state(self.player_index, action, self.deck)
+        new_state = self.game_state.get_successor_state(self.player_index, action, deck_copy)
         child_node = MCTSNode(self.player_index, new_state, self, action)
         self.add_child(child_node)
         return child_node
 
-    def simulate(self):
-        current_state = self.game_state
+    def simulate(self, deck_copy):
+        print(f"SIMULATING...")
+        current_state = copy.deepcopy(self.children[len(self.children) - 1].game_state)
         index_iteration = self.player_index
-        players = current_state.players.copy()
-        while not current_state.game.check_game_over():
+        # players = copy.deepcopy(current_state.players)
+        print(f"Game over OUTSIDE FOR LOOP?: {current_state.check_game_over()}")
+        while not current_state.check_game_over():
             possible_moves = current_state.get_legal_actions()
             action = random.choice(possible_moves)
-            current_state = current_state.get_successor_state(index_iteration, action, self.deck)
-            index_iteration = (index_iteration + 1) % len(players)
+            current_state = current_state.get_successor_state(index_iteration, action, deck_copy)
+            # all_locked = (
+            #     list(
+            #         map(lambda p: f"{p.name} locked?: {p.is_folded}", current_state.players)))
+            # print(f"Current State Player Lock Status in Simulation {all_locked}")
+            all_locked_game = (
+                list(
+                    map(lambda p: f"{p.name} locked?: {p.is_folded}", current_state.players)))
+            print(f"Current State Game Active Players Lock Status in Simulation {all_locked_game}")
+            index_iteration = (index_iteration + 1) % len(current_state.players)
         return current_state.eval_game_state()
 
 class MCTSTree:
     def __init__(self, root_game_state, agent_index, deck):
-        self.root = MCTSNode(agent_index, root_game_state, deck)
+        self.root = MCTSNode(agent_index, root_game_state)
         self.deck = deck
 
     def select_promising_node(self):
@@ -65,9 +75,9 @@ class MCTSTree:
             current_node = current_node.select_child()
         return current_node
 
-    def expand_node(self, node):
+    def expand_node(self, node, deck_copy):
         if not node.is_fully_expanded():
-            return node.expand()
+            return node.expand(deck_copy)
 
     def backpropagate(self, node, result):
         while node is not None:
@@ -75,12 +85,13 @@ class MCTSTree:
             node = node.parent
 
     def best_move(self, simulations_number):
+        deck_copy = copy.deepcopy(self.deck)
         for i in range(simulations_number):
             print(f"SIMULATION NUMBER {i}")
             promising_node = self.select_promising_node()
             if not promising_node.game_state.game.check_game_over():
-                self.expand_node(promising_node)
-            simulation_result = promising_node.simulate()
+                self.expand_node(promising_node, deck_copy) # pass in copied deck here
+            simulation_result = promising_node.simulate(deck_copy)
             self.backpropagate(promising_node, simulation_result)
         return self.select_best_move()
 

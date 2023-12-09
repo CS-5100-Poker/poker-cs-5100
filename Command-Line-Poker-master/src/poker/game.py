@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import copy
 import random
 
 from .deck import Deck
@@ -265,7 +266,7 @@ class Game:
                 players = (list(map(lambda p: p.copy(), self.get_active_players())))
                 game_state = PokerGameState(betting_index % len(active_players), self, self.table.last_bet,
                                             self.table.raise_amount, players)
-                mcts = MCTSAgent(game_state, self.deck.copy())
+                mcts = MCTSAgent(game_state, copy.deepcopy(self.deck))
                 print("MCTS CHOOSING BEST ACTION...")
                 move = mcts.choose_action(betting_index % len(active_players))
                 print(f"MCTS HAS CHOSEN BEST ACTION: {move}")
@@ -361,6 +362,7 @@ class Game:
         for player in self.get_active_players():
             if not player.is_folded:
                 countNotFolded += 1
+                print(f"Number of Players not folded: {countNotFolded}")
         if countNotFolded <= 1:
             return True
 
