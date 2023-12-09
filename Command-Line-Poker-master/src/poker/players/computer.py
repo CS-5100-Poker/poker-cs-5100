@@ -20,8 +20,9 @@ class Computer(Player):
     def copy(self):
         new_player = Computer(self.name, self.playing_style)
         new_player.chips = self.chips
+        new_player.start_chips = self.start_chips
         new_player.bet = self.bet
-        new_player.hand = self.hand.copy()
+        new_player.hand = copy.deepcopy(self.hand)
         new_player.is_dealer = self.is_dealer
         new_player.is_BB = self.is_BB
         new_player.is_SB = self.is_SB
@@ -29,7 +30,7 @@ class Computer(Player):
         new_player.is_locked = self.is_locked
         new_player.is_all_in = self.is_all_in
         new_player.is_in_game = self.is_in_game
-        new_player.best_hand_cards = self.best_hand_cards.copy()
+        new_player.best_hand_cards = copy.deepcopy(self.best_hand_cards)
         new_player.best_hand_score = self.best_hand_score
         new_player.best_hand_rank = self.best_hand_rank
         new_player.rank_subtype = self.rank_subtype

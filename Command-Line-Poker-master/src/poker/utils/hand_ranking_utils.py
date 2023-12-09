@@ -8,7 +8,7 @@ break ties between hands of that particular rank.
 A kicker card (tie-breaker card) is evaluated in cases where the rules of game call for one.
 #######################################################################################################################
 """
-
+import copy
 from itertools import combinations
 from ..prompts.text_prompt import show_cards
 
@@ -44,7 +44,7 @@ handrank_int_str_dict = {
 
 def estimate_hand(hand, deck, community):
     #print(f"{len(deck.cards)} cards in deck")
-    eval_deck = deck.copy()
+    eval_deck = copy.deepcopy(deck)
     if len(hand) == 0:
         hand = eval_deck.deal(2)
     starting_length = len(deck.cards)

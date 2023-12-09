@@ -37,7 +37,7 @@ class MCTSNode():
         return len(self.untried_actions) == 0
 
     def is_leaf(self):
-        print(f"Game Over?: {self.game_state.game.check_game_over()}")
+        print(f"Game Over?: {self.game_state.check_game_over()}")
         return self.game_state.game.check_game_over()
 
     def add_child(self, child_node):

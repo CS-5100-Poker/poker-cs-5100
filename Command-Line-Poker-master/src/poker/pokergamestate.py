@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import copy
 import random
 
 from src.poker.deck import Deck
@@ -293,7 +294,8 @@ class Game:
                 continue
             self.table.update_raise_amount(self.phase)
             if betting_player.name is self.agent_name:
-                game_state = PokerGameState(betting_index % len(active_players), self, self.deck.copy(), self.table.last_bet, self.table.raise_amount)
+                players = (list(map(lambda p: copy.deepcopy(p), self.get_active_players())))
+                game_state = PokerGameState(betting_index % len(active_players), self, copy.deepcopy(self.deck), self.table.last_bet, self.table.raise_amount, players)
                 max_action_value = -9999
                 expectiminimax = Expectiminimax()
                 max_action = None
@@ -442,10 +444,10 @@ class Game:
         return [player for player in self.players if player.is_in_game]
 
 class PokerGameState:
-    def __init__(self, curr_player_index, game, deck, table_last_best: int, raise_amount: int):
+    def __init__(self, curr_player_index, game, deck, table_last_best: int, raise_amount: int, players, last_action = None):
         self.game = game
-        self.players = (list(map(lambda p: p.copy(), self.game.get_active_players())))
-        self.table = self.game.table.copy()
+        self.players = players
+        self.table = copy.deepcopy(self.game.table)
         self.current_player = self.players[curr_player_index]
         self.our_hand = self.current_player.hand
         self.last_bet = table_last_best
@@ -454,6 +456,7 @@ class PokerGameState:
         self.max_player_turn = True
         self.raise_amount = raise_amount
         self.phase = self.game.phase
+        self.last_action = last_action
 
 
     def max_player_turn(self):
@@ -461,6 +464,10 @@ class PokerGameState:
 
     def get_legal_actions(self):
         legal_actions = []
+
+        if all(player.is_locked or player.is_all_in for player in self.players):
+            return legal_actions
+
         last_bet = self.last_bet
         player_chips = self.current_player.chips
 
@@ -487,7 +494,7 @@ class PokerGameState:
         if self.game.show_table:
             print(f"EVALUATE: Player {player.name}; {action}")
 
-        new_state = PokerGameState(player_index, self.game, self.deck, self.last_bet, self.raise_amount)
+        new_state = PokerGameState(player_index, self.game, self.deck, self.last_bet, self.raise_amount, self.players, action)
         new_state.apply_action(player, action)
 
         new_state.max_player_turn = not self.max_player_turn
@@ -497,21 +504,48 @@ class PokerGameState:
 
         return new_state
 
-    def eval_game_state(self):
+    def eval_game_state(self, player_index):
+        player = self.players[player_index]
+        start_chips = player.start_chips
+
         if self.game.show_table:
             print("Evaluating...")
+            print(f"{player.name} started with {start_chips}")
         community = self.table.community
         if self.current_player.name == "Agent":
             currentHand = self.our_hand
         else:
             currentHand = []
+
         if self.game.show_table:
             print(f"HAND: {show_cards(currentHand)}")
+
         value, hand = hand_ranking_utils.estimate_hand(currentHand, self.deck, community)
+        prob_win = value / 100000000000  # lol make this better
+        end_chips = self.game.get_agent_chips()
+        ret = 0
+        if self.last_action is None:
+            ret = end_chips - start_chips
+        elif self.last_action == BettingMove.FOLDED:
+            ret = end_chips - start_chips
+        elif self.last_action == BettingMove.RAISED:
+            raise_amt = 1000
+            num_if_win = self.table.pots[0][0] + len(self.players) * raise_amt
+            num_if_lose = end_chips - start_chips - raise_amt
+            ret = prob_win * num_if_win + (1-prob_win) * num_if_lose
+        elif self.last_action == BettingMove.CALLED:
+            num_if_win = self.table.pots[0][0] + len(self.players) * self.last_bet
+            num_if_lose = end_chips - start_chips - self.last_bet
+            ret = prob_win * num_if_win + (1 - prob_win) * num_if_lose
+        else:
+            num_if_win = 2 * start_chips
+            num_if_lose = - 2 * start_chips
+            ret = prob_win * num_if_win + (1 - prob_win) * num_if_lose
+        #
         if self.game.show_table:
-            print(f"BEST HAND {value}")
-        #show_cards(hand)
-        return value
+            print(f"EVAL VALUE: {ret}")
+        # #show_cards(hand)
+        return ret
 
     def is_card_draw(self): # card_drawn if all players have matched bets, or are all in or folded
         active_players = self.players
@@ -523,6 +557,7 @@ class PokerGameState:
 
     def apply_action(self, player, action):
         if action == BettingMove.FOLDED:
+            player.is_locked = True
             player.fold()  # Mark the player as folded
         elif action == BettingMove.CALLED:
             call_amount = self.raise_amount - self.table.last_bet
@@ -541,20 +576,26 @@ class PokerGameState:
             self.table.last_bet += raise_amount
             self.raise_amount = self.table.last_bet
             for other_player in self.players:
-                if other_player != player and not other_player.is_folded and not other_player.is_all_in:
+                if other_player.name != player.name and not other_player.is_folded and not other_player.is_all_in:
                     player.is_locked = False
                 else:
                     player.is_locked = True
-
         elif action == BettingMove.ALL_IN:
             all_in_amount = player.chips
             player.chips = 0
             self.table.pots[0][0] += all_in_amount
             self.raise_amount += all_in_amount
             player.is_all_in = True
-
+            player.is_locked = True
 
         #self.update_round_status()
+    # def check_and_update_round(self, deck):
+    #     all_locked = (
+    #         list(map(lambda p: f"{p.name} locked?: {p.is_locked or p.is_folded or p.is_all_in}", self.players)))
+    #     print(f"{all_locked}")
+    #     if all(player.is_locked or player.is_all_in or player.is_folded for player in self.players):
+    #         print(f"ADVANCING ")
+    #         self.advance_to_next_round(deck)
 
     def advance_to_next_round(self):
         if self.phase == Phase.PREFLOP:
@@ -586,3 +627,37 @@ class PokerGameState:
     #         self.game.determine_winners()
     #         #self.distribute_pot()
     #         self.game.reset_game()
+
+    def check_game_over(self):
+        """Checks if the game is over.
+
+        If the game is not over (i.e. all but one player has no chips), ask the user if they would
+        like to continue the game.
+
+        Returns:
+            bool: True if the game is over, False otherwise.
+        """
+        end_chips = self.get_agent_chips()
+        print(f"NET: {end_chips - self.start_chips}")
+        for player in self.get_active_players():
+            if player.chips <= 0:
+                player.is_in_game = False
+        active_players = self.get_active_players()
+        if len(active_players) == 1 and self.show_table:
+            text_prompt.show_table(self.players, self.table)
+            text_prompt.show_game_winners(self.players, [active_players[0].name])
+            return True
+        else:
+            while True:
+                if self.show_table:
+                    text_prompt.clear_screen()
+                # user_choice = io_utils.input_no_return(
+                #       "Continue on to next hand? Press (enter) to continue or (n) to stop.   ")
+                # if 'n' in user_choice.lower(): # if self.remaining_rounds != 0:
+                #     max_chips = max(self.get_active_players(), key=lambda player: player.chips).chips
+                #     winners_names = [player.name for player in self.get_active_players() if player.chips == max_chips]
+                #     if self.show_table:
+                #         text_prompt.show_table(self.players, self.table)
+                #         text_prompt.show_game_winners(self.players, winners_names)
+                #     return True
+                return False
