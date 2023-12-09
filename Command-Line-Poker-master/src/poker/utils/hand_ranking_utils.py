@@ -43,7 +43,7 @@ handrank_int_str_dict = {
 
 
 def estimate_hand(hand, deck, community):
-    print(f"{len(deck.cards)} cards in deck")
+    #print(f"{len(deck.cards)} cards in deck")
     eval_deck = deck.copy()
     if len(hand) == 0:
         hand = eval_deck.deal(2)
@@ -69,7 +69,7 @@ def estimate_hand(hand, deck, community):
     uniform_probability = 1 / num_deal
 
     probability_sum = 0
-    print(f"{len(res)} COMBOS")
+    #print(f"{len(res)} COMBOS")
     for deal in res:
         deal_combo = list(deal)
         #print(f"DEAL COMBO: {deal_combo}")

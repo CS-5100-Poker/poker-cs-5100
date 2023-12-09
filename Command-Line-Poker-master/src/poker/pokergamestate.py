@@ -46,6 +46,7 @@ class Game:
             rounds_total = self.remaining_rounds
             self.reset_for_next_round()
             while rounds_total != 0:
+                self.start_chips = self.get_agent_chips()
                 for phase in Phase:
                     self.phase = phase
                     self.deal_cards()
@@ -55,13 +56,13 @@ class Game:
                         # self.net_wins.append(end_chips - self.start_chips)
                         # print(f"ROUNDS LEFT: {rounds_total}")
                         break
-                end_chips = self.get_agent_chips()
-                self.net_wins.append(end_chips - self.start_chips)
-                print(f"ROUNDS LEFT: {rounds_total}")
                 # break
                 self.determine_winners()
                 self.table.hands_played += 1
                 rounds_total -= 1
+                end_chips = self.get_agent_chips()
+                self.net_wins.append(end_chips - self.start_chips)
+                print(f"NET: {end_chips - self.start_chips}")
             if self.check_game_over():
                 break
             #games_total -= 1
@@ -301,7 +302,7 @@ class Game:
                     if self.show_table:
                         print(f"AGENT CONSIDERS {action}")
                     next_state = game_state.get_successor_state(betting_index % len(active_players), action)
-                    next_state_value = expectiminimax.expectiminimax(1, next_state, False, betting_index % len(active_players))
+                    next_state_value = expectiminimax.expectiminimax(3, next_state, False, betting_index % len(active_players))
                     if next_state_value > max_action_value:
                         max_action_value = next_state_value
                         max_action = action
