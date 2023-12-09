@@ -1,8 +1,10 @@
 import copy
 
 from .enums.betting_move import BettingMove
-from .prompts.text_prompt import show_table
+from .prompts.text_prompt import show_table, show_cards
 from .enums.phase import Phase
+from .utils.hand_ranking_utils import estimate_hand
+
 
 class PokerGameState:
     def __init__(self, curr_player_index, game, table_last_best: int, raise_amount: int, players):
@@ -69,7 +71,7 @@ class PokerGameState:
         if self.game.show_table:
             print(f"HAND: {show_cards(currentHand)}")
         deck_copy = self.game.deck.copy()
-        value, hand = hand_ranking_utils.estimate_hand(currentHand, deck_copy, community)
+        value, hand = estimate_hand(currentHand, deck_copy, community)
         if self.game.show_table:
             print(f"BEST HAND {value}")
         #show_cards(hand)
@@ -174,4 +176,66 @@ class PokerGameState:
         deck.burn()
         cards = deck.deal(n)
         self.table.community.extend(cards)
+
+    def is_card_draw(self):  # card_drawn if all players have matched bets, or are all in or folded
+        active_players = self.game.get_active_players()
+        if all(player.is_locked or player.is_all_in for player in active_players):
+            return True
+        if [player.is_folded for player in active_players].count(False) == 1:
+            return True
+        return False
+
+    def apply_action(self, player, action):
+        if action == BettingMove.FOLDED:
+            player.fold()  # Mark the player as folded
+        elif action == BettingMove.CALLED:
+            call_amount = self.table.current_bet - player.current_bet
+            player.chips -= call_amount
+            self.table.pot += call_amount
+            player.current_bet = self.table.current_bet
+        elif action == BettingMove.RAISED:
+            raise_amount = ...  # Determine the raise amount based on game rules
+            player.chips -= raise_amount
+            self.table.pot += raise_amount
+            self.table.current_bet += raise_amount
+            player.current_bet = self.table.current_bet
+        elif action == BettingMove.ALL_IN:
+            all_in_amount = player.chips
+            player.chips = 0
+            self.table.pot += all_in_amount
+            player.current_bet += all_in_amount
+            player.is_all_in = True
+
+        # self.game.update_player_status(player)
+        # self.game.update_round_status()
+
+    def advance_to_next_round(self):
+        if self.phase == Phase.PREFLOP:
+            self.phase = Phase.FLOP
+            self.game.deal_community(3)
+        elif self.phase == Phase.FLOP:
+            self.phase = Phase.TURN
+            self.game.deal_community(1)
+        elif self.phase == Phase.TURN:
+            self.phase = Phase.RIVER
+            self.game.deal_community(1)
+        elif self.phase == Phase.RIVER:
+            self.game.determine_winners()
+            self.game.reset_for_next_round()
+
+    def update_turn(self):
+        active_players = self.game.get_active_players()
+        current_index = active_players.index(self.current_player)
+        next_index = (current_index + 1) % len(active_players)
+        self.current_player = active_players[next_index]
+
+        while self.current_player.has_folded or self.current_player.is_all_in:
+            next_index = (next_index + 1) % len(active_players)
+            self.current_player = active_players[next_index]
+
+    def handle_game_over(self):
+        if self.game.check_game_over():  # Assuming this method checks if the game is over
+            self.game.determine_winners()
+            self.game.distribute_pot()
+            self.game.reset_game()
 

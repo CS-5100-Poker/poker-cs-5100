@@ -375,15 +375,16 @@ class Game:
         else:
             while True:
                 text_prompt.clear_screen()
-                user_choice = io_utils.input_no_return(
-                    "Continue on to next hand? Press (enter) to continue or (n) to stop.   ")
-                if 'n' in user_choice.lower():
-                    max_chips = max(self.get_active_players(), key=lambda player: player.chips).chips
-                    winners_names = [player.name for player in self.get_active_players() if player.chips == max_chips]
-                    text_prompt.show_table(self.players, self.table)
-                    text_prompt.show_game_winners(self.players, winners_names)
-                    return True
+                # user_choice = io_utils.input_no_return(
+                #     "Continue on to next hand? Press (enter) to continue or (n) to stop.   ")
+                # if 'n' in user_choice.lower():
+                #     max_chips = max(self.get_active_players(), key=lambda player: player.chips).chips
+                #     winners_names = [player.name for player in self.get_active_players() if player.chips == max_chips]
+                #     text_prompt.show_table(self.players, self.table)
+                #     text_prompt.show_game_winners(self.players, winners_names)
+                #     return True
                 return False
 
     def get_active_players(self) -> list[Player]:
         return [player for player in self.players if player.is_in_game]
+
