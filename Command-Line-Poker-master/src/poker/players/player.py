@@ -16,6 +16,7 @@ class Player(ABC):
     def __init__(self, name: str):
         self.name = name
         self.chips = 0
+        self.start_chips = 0
         self.bet = 0
         self.hand: list[Card] = []
         self.is_dealer = False
@@ -35,6 +36,7 @@ class Player(ABC):
         """Reset player's state in between hands."""
         self.bet = 0
         self.hand = []
+        self.start_chips = self.chips
         self.is_dealer = False
         self.is_BB = False
         self.is_SB = False

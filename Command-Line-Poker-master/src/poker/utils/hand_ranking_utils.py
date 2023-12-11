@@ -8,7 +8,7 @@ break ties between hands of that particular rank.
 A kicker card (tie-breaker card) is evaluated in cases where the rules of game call for one.
 #######################################################################################################################
 """
-
+import copy
 from itertools import combinations
 from ..prompts.text_prompt import show_cards
 
@@ -42,18 +42,38 @@ handrank_int_str_dict = {
 }
 
 def estimate_hand(hand, deck, community):
+    #print(f"{len(deck.cards)} cards in deck")
+    eval_deck = copy.deepcopy(deck)
     if len(hand) == 0:
-        hand = deck.deal(2)
-    starting_length = len(deck.cards)
+        hand = eval_deck.deal(2)
+    starting_length = len(eval_deck.cards)
     deal_num = 5 - len(community)
-    worst_best_score = 999999999999999999
-    worst_best_combo = []
 
-    should_deal = deal_num == 0 or (deal_num != 0 and len(deck.cards) > starting_length % deal_num)
+    if len(community) == 0:
+        return 25719765832.33753, []
 
-    while should_deal:
-        random_remaining = deck.deal(deal_num)
-        combos = combinations(hand + community + random_remaining, 5)
+    should_deal = deal_num == 0 or (deal_num != 0 and len(eval_deck.cards) > starting_length % deal_num)
+    all_cards = eval_deck.deal(starting_length)
+
+    #num_deal = 1 if deal_num == 0 else starting_length // deal_num
+    res = []
+    if deal_num > 0:
+        deal_combos = combinations(all_cards, deal_num)
+        res.extend(deal_combos)
+        #print(f"{deal_num} COMBOS OF {len(all_cards)}: {len(res)}")
+        num_deal = len(res)
+    else:
+        num_deal = 1
+
+    uniform_probability = 1 / num_deal
+
+    probability_sum = 0
+    #print(f"{len(res)} COMBOS")
+    for deal in res:
+        deal_combo = list(deal)
+        #print(f"DEAL COMBO: {deal_combo}")
+        combos = combinations(hand + community + deal_combo, 5)
+        #print(f"=COMBO: {combos}")
         best_score_so_far = -999999999999999999
         best_combo_so_far = []
         for combo in combos:
@@ -61,15 +81,14 @@ def estimate_hand(hand, deck, community):
             if raw_score > best_score_so_far:
                 best_score_so_far = raw_score # best five out of seven
                 combo = sorted(combo, key=lambda x: x.rank_value, reverse=True)
-                best_combo_so_far = combo
-        if best_score_so_far < worst_best_score:
-            worst_best_score = best_score_so_far
-            worst_best_combo = best_combo_so_far
-        should_deal = deal_num != 0 and len(deck.cards) > starting_length % deal_num
+        expected_prob = best_score_so_far * uniform_probability
+        probability_sum += expected_prob
+        #print(f"{best_score_so_far} * {uniform_probability} = {expected_prob}")
 
     #show_cards(worst_best_combo)
 
-    return worst_best_score, worst_best_combo
+
+    return probability_sum, []
 
 def determine_showdown_winner(showdown_players, community):
     """Determines which player(s) wins the showdown.

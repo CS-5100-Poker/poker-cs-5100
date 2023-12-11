@@ -21,6 +21,7 @@ class Computer(Player):
     def copy(self):
         new_player = Computer(self.name, self.playing_style)
         new_player.chips = self.chips
+        new_player.start_chips = self.start_chips
         new_player.bet = self.bet
         new_player.hand = copy.deepcopy(self.hand)
         new_player.is_dealer = self.is_dealer

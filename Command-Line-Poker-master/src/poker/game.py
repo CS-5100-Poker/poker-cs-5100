@@ -33,6 +33,7 @@ class Game:
         self.agent_name = "Agent"
         self.show_table = True
         self.setup()
+        self.start_chips = self.get_agent_chips()
 
     def play(self) -> None:
         """Runs the main loop of the game."""
@@ -52,9 +53,9 @@ class Game:
     def setup(self) -> None:
         """Sets up the game before any rounds are run."""
         num_computer_players = 1
-        starting_chips = 999999
+        starting_chips = 100000
         self.create_players(num_computer_players, starting_chips)
-        self.table.big_blind = 19999
+        self.table.big_blind = 2000
 
     def create_players(self, num_computer, starting_chips) -> None:
         playing_style1 = random.choice(list(ComputerPlayingStyle))
@@ -264,8 +265,8 @@ class Game:
             self.table.update_raise_amount(self.phase)
             if betting_player.name is self.agent_name:
                 players = (list(map(lambda p: p.copy(), self.get_active_players())))
-                game_state = PokerGameState(betting_index % len(active_players), self, self.table.last_bet,
-                                            self.table.raise_amount, players)
+                game_state = PokerGameState(betting_index % len(active_players), copy.deepcopy(self),
+                                            self.table.last_bet, self.table.raise_amount, players)
                 mcts = MCTSAgent(game_state, copy.deepcopy(self.deck))
                 print("MCTS CHOOSING BEST ACTION...")
                 move = mcts.choose_action(betting_index % len(active_players))
@@ -349,6 +350,27 @@ class Game:
                 winner.chips += int(self.table.pots[i][0] / len(hand_winners))
             text_prompt.show_showdown_results(self.players, self.table, hand_winners, showdown_players, pot_num=i)
 
+    def check_agent_win(self):
+        if self.table.pots[-1][0] == 0:
+            self.table.pots = self.table.pots[:-1]
+        unfolded_players = [player for player in self.get_active_players() if not player.is_folded]
+        if len(unfolded_players) == 1:
+            winnings = 0
+            for pot in self.table.pots:
+                winnings += pot[0]
+            winner = unfolded_players[0]
+
+        else:
+            # If only 1 player is eligible for last side pot (i.e. other players folded/all-in), award player that pot
+            players_eligible_last_pot = []
+            for player in self.table.pots[-1][1]:
+                if not player.is_folded:
+                    players_eligible_last_pot.append(player)
+            if len(players_eligible_last_pot) == 1:
+                hand_winner = players_eligible_last_pot[0]
+            while len(self.table.community) < 5:
+                self.table.community.extend(self.deck.deal(1))
+
     def check_game_over(self):
         """Checks if the game is over.
 
@@ -386,6 +408,13 @@ class Game:
                 #     text_prompt.show_game_winners(self.players, winners_names)
                 #     return True
                 return False
+
+    def get_agent_chips(self):
+        agents = [p for p in self.players if p.name == "Agent"]
+        if len(agents) > 0:
+            return agents[0].chips
+        else:
+            return -9999999999999999
 
     def get_active_players(self) -> list[Player]:
         return [player for player in self.players if player.is_in_game]

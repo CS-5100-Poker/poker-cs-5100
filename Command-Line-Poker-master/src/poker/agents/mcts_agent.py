@@ -35,24 +35,28 @@ class MCTSNode:
     def select_child(self):
         return max(self.children, key=lambda node: node.ucb1())
 
-    def expand(self, deck_copy):
+    def expand(self, simulation_deck):
         print(f"EXPANDING...")
         action = self.untried_actions.pop()
-        new_state = self.game_state.get_successor_state(self.player_index, action, deck_copy)
+        new_state = self.game_state.get_successor_state(self.player_index, action, simulation_deck)
         child_node = MCTSNode(self.player_index, new_state, self, action)
         self.add_child(child_node)
         return child_node
 
-    def simulate(self, deck_copy):
+    def simulate(self, simulation_deck):
         print(f"SIMULATING...")
+
         current_state = copy.deepcopy(self.children[len(self.children) - 1].game_state)
         index_iteration = self.player_index
         # players = copy.deepcopy(current_state.players)
         print(f"Game over OUTSIDE FOR LOOP?: {current_state.check_game_over()}")
+        loopIdx = 1
         while not current_state.check_game_over():
+            print(f"Current while loop iteration: {loopIdx}")
+            print(f"{len(simulation_deck.cards)} remaining cards in simulation deck")
             possible_moves = current_state.get_legal_actions()
             action = random.choice(possible_moves)
-            current_state = current_state.get_successor_state(index_iteration, action, deck_copy)
+            current_state = current_state.get_successor_state(index_iteration, action, simulation_deck)
             # all_locked = (
             #     list(
             #         map(lambda p: f"{p.name} locked?: {p.is_folded}", current_state.players)))
@@ -62,7 +66,11 @@ class MCTSNode:
                     map(lambda p: f"{p.name} locked?: {p.is_folded}", current_state.players)))
             print(f"Current State Game Active Players Lock Status in Simulation {all_locked_game}")
             index_iteration = (index_iteration + 1) % len(current_state.players)
-        return current_state.eval_game_state()
+            loopIdx += 1
+        agent_wins = current_state.check_agent_wins()
+        if agent_wins:
+            self.wins += 1
+        return 1 if agent_wins else 0
 
 class MCTSTree:
     def __init__(self, root_game_state, agent_index, deck):
@@ -75,9 +83,9 @@ class MCTSTree:
             current_node = current_node.select_child()
         return current_node
 
-    def expand_node(self, node, deck_copy):
+    def expand_node(self, node, simulation_deck):
         if not node.is_fully_expanded():
-            return node.expand(deck_copy)
+            return node.expand(simulation_deck)
 
     def backpropagate(self, node, result):
         while node is not None:
@@ -85,13 +93,13 @@ class MCTSTree:
             node = node.parent
 
     def best_move(self, simulations_number):
-        deck_copy = copy.deepcopy(self.deck)
         for i in range(simulations_number):
+            simulation_deck = copy.deepcopy(self.deck)
             print(f"SIMULATION NUMBER {i}")
             promising_node = self.select_promising_node()
             if not promising_node.game_state.game.check_game_over():
-                self.expand_node(promising_node, deck_copy) # pass in copied deck here
-            simulation_result = promising_node.simulate(deck_copy)
+                self.expand_node(promising_node, simulation_deck) # pass in copied deck here
+            simulation_result = promising_node.simulate(simulation_deck)
             self.backpropagate(promising_node, simulation_result)
         return self.select_best_move()
 

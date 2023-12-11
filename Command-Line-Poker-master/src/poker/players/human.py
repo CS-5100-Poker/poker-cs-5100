@@ -16,6 +16,7 @@ class Human(Player):
     def copy(self):
         new_player = Human(self.name)
         new_player.chips = self.chips
+        new_player.start_chips = self.start_chips
         new_player.bet = self.bet
         new_player.hand = self.hand.copy()
         new_player.is_dealer = self.is_dealer
