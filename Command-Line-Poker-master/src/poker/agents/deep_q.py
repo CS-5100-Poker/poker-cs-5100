@@ -1,10 +1,18 @@
-from keras.layers import Input, Dense
-from keras.models import Model
+from tensorflow.keras.layers import Input, Dense
+from tensorflow.keras.models import Model
 import numpy as np
 
 class DeepQLearning:
     def __init__(self):
-        # self.game_state = game_state
+        self.game_state = game_state
+        self.model = self._build_model()
+        self.memory = deque(maxlen=2000)
+        self.gamma = 0.95  # discount rate
+        self.epsilon = 1.0  # exploration rate
+        self.epsilon_min = 0.01
+        self.epsilon_decay = 0.995
+        self.learning_rate = 0.001
+
 
         # input as some vector
         # keras -> input layer to relu other layer x
@@ -21,17 +29,49 @@ class DeepQLearning:
 
         pass
 
-    def
+
 
     def choose_action(self):
-        # return action with highest q value from output layer
-        # track reward of that action ...
-            # what is the next state? or - execute that action
+        # Example pseudocode:
+        current_state = self._build_features_vector()
+        action = self.act(current_state)
+        return action # need to convert
+
+    def act(self, state):
+        if np.random.rand() <= self.epsilon:
+            return random.randrange(self.action_size)
+        act_values = self.model.predict(state)
+        return np.argmax(act_values[0])  # returns action index
+
+
+    def remember(self, state, action, reward, next_state, done):
+        self.memory.append((state, action, reward, next_state, done))
 
     def update_state(self, start_state, action, new_state):
+        if new_state.game.check_game_over():
+            reward = new_state.potsize # replace with end - start chips
+            done = True
+        else:
+            reward = 0
+            done = False
+
+        self.remember(start_state, action, reward, new_state, done)
+
         # check if the new state is game over
-            # if so, record the reward
+        # if so, record the reward
         # else, record 0
+
+    def update_model_q_values(self, batch_size):
+        minibatch = random.sample(self.memory, batch_size)
+        for state, action, reward, next_state, done in minibatch:
+            target = reward
+            if not done:
+                target = reward + self.gamma * np.amax(self.model.predict(next_state)[0])
+            target_f = self.model.predict(state)
+            target_f[0][action] = target
+            self.model.fit(state, target_f, epochs=1, verbose=0)
+        if self.epsilon > self.epsilon_min:
+            self.epsilon *= self.epsilon_decay
 
     def _build_features_vector(self):
         return self.game_state.make_features()

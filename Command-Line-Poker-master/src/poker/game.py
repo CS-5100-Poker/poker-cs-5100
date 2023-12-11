@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import copy
 import random
 
 from .deck import Deck
@@ -14,7 +15,8 @@ from .prompts import text_prompt
 from .table import Table
 from .utils import hand_ranking_utils
 from .utils import io_utils
-from .agents.mcts_agent import MCTSAgent
+
+from .agents.deep_q import DeepQAgent
 
 
 class Game:
@@ -31,8 +33,10 @@ class Game:
         self.long_pause = 3.0
         self.agent_name = "Agent"
         self.show_table = True
-        self.deep_q = DeepQAgent()
         self.setup()
+        players = (list(map(lambda p: copy.deepcopy(p), self.get_active_players())))
+        init_game_state = PokerGameState(copy.deepcopy(self), copy.deepcopy(self.deck), self.table.last_bet, self.table.raise_amount, players)
+        self.deep_q = DeepQAgent(init_game_state)
 
     def play(self) -> None:
         """Runs the main loop of the game."""
@@ -263,9 +267,6 @@ class Game:
                 continue
             self.table.update_raise_amount(self.phase)
             if betting_player.name is self.agent_name:
-                players = (list(map(lambda p: p.copy(), self.get_active_players())))
-                #game_state = PokerGameState(betting_index % len(active_players), self, self.table.last_bet,
-                #                            self.table.raise_amount, players)
                 move = self.deep_q.choose_action()
             else:
                 move = betting_player.choose_next_move(self.table.raise_amount, self.table.num_times_raised,
@@ -284,6 +285,10 @@ class Game:
             if move is BettingMove.FOLDED and isinstance(betting_player, Human):
                 self.set_game_speed(is_fast=True)
             betting_player.is_locked = True
+            if betting_player.name is self.agent_name:
+                updated_game_state = PokerGameState(copy.deepcopy(self), self.deck.copy(), self.table.last_bet,
+                                            self.table.raise_amount, players, betting_index % len(active_players))
+                self.deep_q.update_state(deep_q.game_state, move, updated_game_state)
             betting_index += 1
             text_prompt.show_table(self.players, self.table)
 
