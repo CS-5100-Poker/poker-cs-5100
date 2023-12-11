@@ -34,7 +34,7 @@ class DeepQLearningAgent(Computer):
         self.model = self._build_model()
 
     def _build_model(self):
-        """Neural Net for Deep-Q learning Model."""
+        # Neural Net for Deep-Q learning Model.
         model = Sequential()
         model.add(Dense(24, input_dim=self.state_size, activation='relu'))
         model.add(Dense(24, activation='relu'))
