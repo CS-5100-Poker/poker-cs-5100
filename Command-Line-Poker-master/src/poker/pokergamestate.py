@@ -295,7 +295,7 @@ class Game:
             self.table.update_raise_amount(self.phase)
             if betting_player.name is self.agent_name:
                 players = (list(map(lambda p: copy.deepcopy(p), self.get_active_players())))
-                game_state = PokerGameState(betting_index % len(active_players), self, copy.deepcopy(self.deck), self.table.last_bet, self.table.raise_amount, players)
+                game_state = PokerGameState(betting_index % len(active_players), copy.deepcopy(self), self.deck.copy(), self.table.last_bet, self.table.raise_amount, players)
                 max_action_value = -9999
                 expectiminimax = Expectiminimax()
                 max_action = None
@@ -311,6 +311,7 @@ class Game:
                 move = max_action
                 if self.show_table:
                     print(f"AGENT CHOOSES {max_action}")
+                    #print(f"{len(self.deck.cards)} remaining cards in deck")
             else:
                 move = betting_player.choose_next_move(self.table.raise_amount, self.table.num_times_raised,
                                                    self.table.last_bet)
@@ -521,6 +522,7 @@ class PokerGameState:
             print(f"HAND: {show_cards(currentHand)}")
 
         value, hand = hand_ranking_utils.estimate_hand(currentHand, self.deck, community)
+        # print(f"{len(self.deck.cards)} remaining cards in deck")
         prob_win = value / 100000000000  # lol make this better
         end_chips = self.game.get_agent_chips()
         ret = 0

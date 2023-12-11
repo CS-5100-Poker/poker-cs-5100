@@ -47,7 +47,7 @@ def estimate_hand(hand, deck, community):
     eval_deck = copy.deepcopy(deck)
     if len(hand) == 0:
         hand = eval_deck.deal(2)
-    starting_length = len(deck.cards)
+    starting_length = len(eval_deck.cards)
     deal_num = 5 - len(community)
 
     if len(community) == 0:
