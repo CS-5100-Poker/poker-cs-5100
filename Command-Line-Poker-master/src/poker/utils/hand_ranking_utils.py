@@ -10,6 +10,8 @@ A kicker card (tie-breaker card) is evaluated in cases where the rules of game c
 """
 
 from itertools import combinations
+from itertools import product
+from src.poker.deck import Deck
 
 card_int_str_dict = {
     2: 'Two',
@@ -40,6 +42,56 @@ handrank_int_str_dict = {
     1: 'High Card',
 }
 
+def avg_predicted_hand_value(cards):
+    # calculate all possible values of "cards" at end of game (i.e. once all cards are down)
+    # as well as the likelihoods of these values
+
+    # return average of these values (e.g. if 90% chance of value 20 and 10% chance of value 100
+    # then return 0.9 x 20 + 0.10 x 100)
+
+    # if all cards have been dealt (so if length of "cards" is 7) then return actual value of "cards"
+    
+    remaining_deck = create_deck_excluding(cards)
+    num_missing_cards = 7 - len(cards)
+    
+    if num_missing_cards == 0:
+        # If 7 cards are already present, evaluate the hand directly.
+        return score_hand(cards)
+    
+    # Generate all possible combinations for the missing cards.
+    possible_combinations = combinations(remaining_deck, num_missing_cards)
+    
+    # Initialize variables to store total score and count.
+    total_score = 0
+    count = 0
+
+    for combo in possible_combinations:
+        # For each combination, create a potential final hand.
+        final_hand = cards + list(combo)
+        
+        # Find the best 5-card hand from the 7 cards.
+        best_hand_score = find_best_hand(final_hand)
+        
+        # Update total score and count.
+        total_score += best_hand_score
+        count += 1
+
+    # Return the average score of all possible hands.
+    return total_score / count if count else 0
+
+def find_best_hand(cards):
+    # Generate all 5-card combinations from the 7 cards.
+    hand_combinations = combinations(cards, 5)
+    
+    # Find the best scoring hand.
+    best_score = max(score_hand(hand) for hand in hand_combinations)
+    return best_score
+
+def create_deck_excluding(cards):
+    d = Deck()
+    for c in cards:
+        d.remove(c)
+    return d
 
 def determine_showdown_winner(showdown_players, community):
     """Determines which player(s) wins the showdown.
