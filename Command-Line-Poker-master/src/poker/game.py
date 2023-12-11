@@ -31,6 +31,7 @@ class Game:
         self.long_pause = 3.0
         self.agent_name = "Agent"
         self.show_table = True
+        self.deep_q = DeepQAgent()
         self.setup()
 
     def play(self) -> None:
@@ -263,12 +264,9 @@ class Game:
             self.table.update_raise_amount(self.phase)
             if betting_player.name is self.agent_name:
                 players = (list(map(lambda p: p.copy(), self.get_active_players())))
-                game_state = PokerGameState(betting_index % len(active_players), self, self.table.last_bet,
-                                            self.table.raise_amount, players)
-                mcts = MCTSAgent(game_state, self.deck.copy())
-                print("MCTS CHOOSING BEST ACTION...")
-                move = mcts.choose_action(betting_index % len(active_players))
-                print(f"MCTS HAS CHOSEN BEST ACTION: {move}")
+                #game_state = PokerGameState(betting_index % len(active_players), self, self.table.last_bet,
+                #                            self.table.raise_amount, players)
+                move = self.deep_q.choose_action()
             else:
                 move = betting_player.choose_next_move(self.table.raise_amount, self.table.num_times_raised,
                                                        self.table.last_bet)

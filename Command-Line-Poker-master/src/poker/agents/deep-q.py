@@ -1,11 +1,53 @@
+from keras.layers import Input, Dense
+from keras.models import Model
+import numpy as np
 
 class DeepQLearning:
-    def __init__(self, game_state):
-        self.game_state = game_state
+    def __init__(self):
+        # self.game_state = game_state
+
+        # input as some vector
+        # keras -> input layer to relu other layer x
+        # output -> dense(2)(x)
+        # model = Model(inputs=[input_n], outputs=out)
+        # model.compile(optimizer='adam', loss='mse') mean-sqyared
+        # return model
+
+        # number of episodes - run things
+        # state action table - instead a q network
+            # input - state of the environment
+            # output - q value per action
+        # poker - play a large number of hands
+
         pass
 
+    def
+
     def choose_action(self):
-        pass
+        # return action with highest q value from output layer
+        # track reward of that action ...
+            # what is the next state? or - execute that action
+
+    def update_state(self, start_state, action, new_state):
+        # check if the new state is game over
+            # if so, record the reward
+        # else, record 0
+
+    def _build_features_vector(self):
+        return self.game_state.make_features()
+
+    def _build_model(self):
+        input_n = Input(shape=(16,), name="input")
+        x = Dense(24, activation='relu')(input_n)
+        out = Dense(2)(x)
+
+        model = Model(inputs=[input_n], outputs=out)
+        model.compile(optimizer='adam', loss='mse')
+        return model
+
+
+    # METHODS
+        # Calculate q value as reward + discount * max_action(s', a')
 
 
 """

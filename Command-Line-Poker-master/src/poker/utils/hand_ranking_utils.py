@@ -40,6 +40,64 @@ handrank_int_str_dict = {
     1: 'High Card',
 }
 
+def estimate_cards_new(cards, deck):
+    # calculate all possible values of "cards" at end of game (i.e. once all cards are down)
+    # as well as the likelihoods of these values
+
+    # return average of these values (e.g. if 90% chance of value 20 and 10% chance of value 100
+    # then return 0.9 x 20 + 0.10 x 100)
+
+    # if all cards have been dealt (so if length of "cards" is 7) then return actual value of "cards"
+    return [1]
+
+def estimate_hand(hand, deck, community): # deck, include opponents cards
+    #print(f"{len(deck.cards)} cards in deck")
+    eval_deck = copy.deepcopy(deck)
+    if len(hand) == 0:
+        hand = eval_deck.deal(2)
+    starting_length = len(eval_deck.cards)
+    deal_num = 5 - len(community)
+
+    if len(community) == 0:
+        return 25719765832.33753, []
+
+    should_deal = deal_num == 0 or (deal_num != 0 and len(eval_deck.cards) > starting_length % deal_num)
+    all_cards = eval_deck.deal(starting_length)
+
+    #num_deal = 1 if deal_num == 0 else starting_length // deal_num
+    res = []
+    if deal_num > 0:
+        deal_combos = combinations(all_cards, deal_num)
+        res.extend(deal_combos)
+        #print(f"{deal_num} COMBOS OF {len(all_cards)}: {len(res)}")
+        num_deal = len(res)
+    else:
+        num_deal = 1
+
+    uniform_probability = 1 / num_deal
+
+    probability_sum = 0
+    #print(f"{len(res)} COMBOS")
+    for deal in res:
+        deal_combo = list(deal)
+        #print(f"DEAL COMBO: {deal_combo}")
+        combos = combinations(hand + community + deal_combo, 5)
+        #print(f"=COMBO: {combos}")
+        best_score_so_far = -999999999999999999
+        best_combo_so_far = []
+        for combo in combos:
+            raw_score = score_hand(combo)
+            if raw_score > best_score_so_far:
+                best_score_so_far = raw_score # best five out of seven
+                combo = sorted(combo, key=lambda x: x.rank_value, reverse=True)
+        expected_prob = best_score_so_far * uniform_probability
+        probability_sum += expected_prob
+        #print(f"{best_score_so_far} * {uniform_probability} = {expected_prob}")
+
+    #show_cards(worst_best_combo)
+
+
+    return probability_sum, []
 
 def determine_showdown_winner(showdown_players, community):
     """Determines which player(s) wins the showdown.
