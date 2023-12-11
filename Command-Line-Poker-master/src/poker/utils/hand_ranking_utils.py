@@ -42,6 +42,7 @@ handrank_int_str_dict = {
     1: 'High Card',
 }
 
+# Very slow. Complexity should be reduced.
 def avg_predicted_hand_value(cards):
     # calculate all possible values of "cards" at end of game (i.e. once all cards are down)
     # as well as the likelihoods of these values
@@ -50,7 +51,7 @@ def avg_predicted_hand_value(cards):
     # then return 0.9 x 20 + 0.10 x 100)
 
     # if all cards have been dealt (so if length of "cards" is 7) then return actual value of "cards"
-    
+
     remaining_deck = create_deck_excluding(cards)
     num_missing_cards = 7 - len(cards)
     
@@ -90,8 +91,8 @@ def find_best_hand(cards):
 def create_deck_excluding(cards):
     d = Deck()
     for c in cards:
-        d.remove(c)
-    return d
+        d.cards.remove(c)
+    return d.cards
 
 def determine_showdown_winner(showdown_players, community):
     """Determines which player(s) wins the showdown.

@@ -49,9 +49,9 @@ class Game:
     def setup(self) -> None:
         """Sets up the game before any rounds are run."""
         num_computer_players = 1
-        starting_chips = 999999
+        starting_chips = 100000
         self.create_players(num_computer_players, starting_chips)
-        self.table.big_blind = 19999
+        self.table.big_blind = 2000
 
     def create_players(self, num_computer, starting_chips) -> None:
         playing_style1 = random.choice(list(ComputerPlayingStyle))
