@@ -250,7 +250,7 @@ def show_showdown_results(initial_players, table, hand_winners, showdown_players
     print('\n\n\n')
     show_pot_winners(hand_winners, showdown_players, pot_num)
     print()
-    input("Press any key to continue....")
+    #input("Press any key to continue....")
 
 
 def show_game_winners(initial_players, winners_names):
@@ -350,13 +350,13 @@ def show_all_in(player_name, time):
 def show_default_winner_fold(player_name):
     print(' >>> All other players folded...')
     print(f' >>> {player_name} won the pot!')
-    input("\n\nPress any key to continue....")
+    #input("\n\nPress any key to continue....")
 
 
 def show_default_winner_eligibility(player_name, side_pot_num):
     print(f'\n\n >>> {player_name} is the only player eligible for SIDE POT #{side_pot_num}. ')
     print(f' >>> Gave those chips to {player_name}.')
-    input("\n\nPress any key to continue....")
+    #input("\n\nPress any key to continue....")
 
 
 def show_phase_change_alert(phase: Phase, dealer: str, pause_time: float):

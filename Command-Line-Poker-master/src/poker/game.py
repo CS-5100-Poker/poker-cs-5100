@@ -32,15 +32,19 @@ class Game:
         self.pause = 2.0
         self.long_pause = 3.0
         self.agent_name = "Agent"
-        self.show_table = True
+        self.show_table = False
         self.setup()
         self.batch_size = 32
+        self.agent_winnings = []
         players = (list(map(lambda p: copy.deepcopy(p), self.get_active_players())))
         init_game_state = PokerGameState(copy.deepcopy(self), copy.deepcopy(self.deck), self.table.last_bet, self.table.raise_amount, players)
-        self.deep_q = DeepQLearning(init_game_state)
+        deep_q = DeepQLearning(init_game_state)
+        self.deep_q = deep_q
     def play(self) -> None:
         """Runs the main loop of the game."""
-        while True:
+        for episode_index in range(40):
+            print(f"EPISODE {episode_index}")
+            #while True:
             self.reset_for_next_round()
             for phase in Phase:
                 self.phase = phase
@@ -50,16 +54,18 @@ class Game:
                     break
             self.determine_winners()
             self.table.hands_played += 1
-            if self.check_game_over():
-                break
-        self.deep_q.save_model()
+            over = self.check_game_over()
+            self.reset_entire_game()
+            if over:
+                continue
+            #self.deep_q.save_model()
 
     def setup(self) -> None:
         """Sets up the game before any rounds are run."""
         num_computer_players = 1
-        starting_chips = 999999
+        starting_chips = 100000
         self.create_players(num_computer_players, starting_chips)
-        self.table.big_blind = 19999
+        self.table.big_blind = 2000
 
     def create_players(self, num_computer, starting_chips) -> None:
         playing_style1 = random.choice(list(ComputerPlayingStyle))
@@ -74,6 +80,20 @@ class Game:
             self.players.append(computer)
         for player in self.players:
             player.chips = starting_chips
+
+    def reset_entire_game(self):
+        self.phase = Phase.PREFLOP
+        self.deck = Deck()
+        self.players = []
+        self.dealer = None
+        self.table = Table()
+        self.short_pause = 1.0
+        self.pause = 2.0
+        self.long_pause = 3.0
+        self.agent_name = "Agent"
+        self.show_table = False
+        self.setup()
+        self.batch_size = 32
 
     def reset_for_next_round(self) -> None:
         """Gets players, table, and deck ready to play another hand."""
@@ -257,6 +277,9 @@ class Game:
 
     def bet_util_all_locked_in(self, first_act: int, active_players: list[Player]) -> None:
         betting_index = first_act
+        players = (list(map(lambda p: copy.deepcopy(p), self.get_active_players())))
+        init_game_state = PokerGameState(copy.deepcopy(self), copy.deepcopy(self.deck), self.table.last_bet,
+                                            self.table.raise_amount, players, None, betting_index % len(active_players))
         while True:
             if all(player.is_locked or player.is_all_in for player in active_players):
                 break
@@ -269,6 +292,7 @@ class Game:
             self.table.update_raise_amount(self.phase)
             if betting_player.name is self.agent_name:
                 move = self.deep_q.choose_action()
+                #move = BettingMove.CALLED
             else:
                 move = betting_player.choose_next_move(self.table.raise_amount, self.table.num_times_raised,
                                                        self.table.last_bet)
@@ -289,8 +313,8 @@ class Game:
             if betting_player.name is self.agent_name:
                 players = (list(map(lambda p: copy.deepcopy(p), self.get_active_players())))
                 updated_game_state = PokerGameState(copy.deepcopy(self), copy.deepcopy(self.deck), self.table.last_bet,
-                                            self.table.raise_amount, players, betting_index % len(active_players))
-                self.deep_q.update_state(self.deep_q.game_state, move, updated_game_state)
+                                            self.table.raise_amount, players, move, betting_index % len(active_players))
+                self.deep_q.update_state(init_game_state, move, updated_game_state)
                 self.deep_q.update_model_q_values(self.batch_size)
             betting_index += 1
             text_prompt.show_table(self.players, self.table)
@@ -335,6 +359,10 @@ class Game:
             while len(self.table.community) < 5:
                 self.table.community.extend(self.deck.deal(1))
             self.showdown()
+        start_chips = self.get_agent_chips(True)
+        winnings = self.get_agent_chips(False) - start_chips
+        if winnings != 0:
+            self.agent_winnings.append(winnings)
 
     def showdown(self):
         """Runs the showdown phase."""
@@ -369,10 +397,10 @@ class Game:
                 countNotFolded += 1
         if countNotFolded <= 1:
             players = (list(map(lambda p: copy.deepcopy(p), self.get_active_players())))
-            updated_game_state = PokerGameState(copy.deepcopy(self), copy.deepcopy(self.deck), self.table.last_bet,
-                                                self.table.raise_amount, players, self.deep_q.game_state.last_action, 0)
-            self.deep_q.update_state(self.deep_q.game_state, self.deep_q.game_state.last_action, updated_game_state)
-            self.deep_q.update_model_q_values(self.batch_size)
+            #updated_game_state = PokerGameState(copy.deepcopy(self), copy.deepcopy(self.deck), self.table.last_bet,
+            #                                    self.table.raise_amount, players, self.deep_q.game_state.last_action, 0)
+            #self.deep_q.update_state(self.deep_q.game_state, self.deep_q.game_state.last_action, updated_game_state)
+            #self.deep_q.update_model_q_values(self.batch_size)
             return True
 
         for player in self.get_active_players():
@@ -398,3 +426,10 @@ class Game:
 
     def get_active_players(self) -> list[Player]:
         return [player for player in self.players if player.is_in_game]
+
+    def get_agent_chips(self, start):
+        agents = [p for p in self.players if p.name == "Agent"]
+        if len(agents) > 0:
+            return agents[0].start_chips if start else agents[0].chips
+        else:
+            return -9999999999999999

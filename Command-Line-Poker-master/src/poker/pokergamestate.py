@@ -12,6 +12,7 @@ class PokerGameState:
         self.table = copy.deepcopy(self.game.table)
         self.current_player = self.players[curr_player_index] if curr_player_index else None
         self.our_hand = self.current_player.hand if curr_player_index else []
+        self.our_chips = self.current_player.chips if curr_player_index else 0
         self.last_bet = table_last_best
         self.winnings = -table_last_best
         self.deck = deck
@@ -230,35 +231,39 @@ class PokerGameState:
         community = self.table.community
         currentHand = self.our_hand
         hand_value = hand_ranking_utils.estimate_hand(currentHand, self.deck, community)[0]
-        cards_array = [0] * 5
-        # [0, 0, 0, 0] , [1,0,0,0] ... [0,0,0,1]
-        if 0 < hand_value < 5000000000:
+        cards_array = [0] * 4
+        if 5000000000 <= hand_value < 10000000000:
             cards_array[0] = 1
-        elif 5000000000 < hand_value < 10000000000:
+        elif 10000000000 <= hand_value < 15000000000:
             cards_array[1] = 1
-        elif 10000000000 < hand_value < 15000000000:
+        elif 15000000000 <= hand_value < 20000000000:
             cards_array[2] = 1
-        elif 15000000000 < hand_value < 20000000000:
+        elif 20000000000 <= hand_value:
             cards_array[3] = 1
-        else:
-            cards_array[4] = 1
 
         # pot size
         # [0, 0, 0, 0] based on ranges
-        pots = self.game.table.pots[0] if len(self.game.table.pots) > 0 else 100000
-        pot_size = [0, 0, 0, 0, 0]
-        if pots < 50000:
+        pots = self.game.table.pots[0][0] if len(self.game.table.pots) > 0 else 100000
+        pot_size = [0] * 4
+        if 50000 <= pots < 100000:
             pot_size[0] = 1
-        elif pots < 100000:
+        elif 100000 <= pots < 150000:
             pot_size[1] = 1
-        elif pots < 150000:
+        elif 150000 <= pots < 200000:
             pot_size[2] = 1
-        elif pots < 200000:
+        elif 200000 <= pots:
             pot_size[3] = 1
-        else:
-            pot_size[4] = 1
 
-        # our coins  based on ranges
-        our_coins = [0, 0, 0, 0]
+        # our chips based on ranges
+        chips = self.our_chips
+        our_chips = [0] * 4
+        if 50000 <= chips < 100000:
+            our_chips[0] = 1
+        elif 100000 <= chips < 150000:
+            our_chips[1] = 1
+        elif 150000 <= chips < 200000:
+            our_chips[2] = 1
+        elif 200000 <= chips:
+            our_chips[3] = 1
 
-        return cards_array + pot_size + our_coins # track order
+        return cards_array + pot_size + our_chips # track order

@@ -17,7 +17,9 @@ from .poker.game import Game
 # TODO: Look for bugs
 # TODO: Expand on current functionality
 def main():
-    Game().play()
+    game = Game()
+    game.play()
+    print(f"{game.agent_winnings}")
 
 
 if __name__ == '__main__':
