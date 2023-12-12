@@ -29,7 +29,7 @@ class MCTSNode:
         self.children.append(child_node)
 
     def update(self, win):
-        print(f"updating win count for {self.move} by {win}")
+        # print(f"updating win count for {self.move} by {win}")
         self.visits += 1
         self.wins += win
 
@@ -39,7 +39,7 @@ class MCTSNode:
         return max(self.children, key=lambda node: node.ucb1())
 
     def expand(self, simulation_deck):
-        print(f"EXPANDING...")
+        # print(f"EXPANDING...")
         action = self.untried_actions.pop()
         new_state = self.game_state.get_successor_state(self.player_index, action, simulation_deck)
         child_node = MCTSNode(self.player_index, new_state, self, action)
@@ -105,7 +105,7 @@ class MCTSTree:
     def best_move(self, simulations_number):
         for i in range(simulations_number):
             simulation_deck = copy.deepcopy(self.deck)
-            print(f"ITERATION NUMBER {i}")
+            # print(f"ITERATION NUMBER {i}")
             promising_node = self.select_promising_node()
             if promising_node is None:
                 break

@@ -60,14 +60,14 @@ class Game:
 
     def create_players(self, num_computer, starting_chips) -> None:
         playing_style1 = random.choice(list(ComputerPlayingStyle))
-        human = Computer(self.agent_name, playing_style1)
+        human = Computer(self.agent_name, ComputerPlayingStyle.RANDOM)
         self.players.append(human)
         names = ['Homer', 'Bart', 'Lisa', 'Marge', 'Milhouse', 'Moe', 'Maggie', 'Nelson', 'Ralph']
         computer_names = [n for n in names if n != human.name]
         random.shuffle(computer_names)
         for _ in range(num_computer):
             playing_style = random.choice(list(ComputerPlayingStyle))
-            computer = Computer(computer_names.pop(), playing_style)
+            computer = Computer(computer_names.pop(), ComputerPlayingStyle.RANDOM)
             self.players.append(computer)
         for player in self.players:
             player.chips = starting_chips
@@ -269,7 +269,7 @@ class Game:
                 game_state = PokerGameState(betting_index % len(active_players), copy.deepcopy(self),
                                             self.table.last_bet, self.table.raise_amount, players)
                 mcts = MCTSAgent(game_state, copy.deepcopy(self.deck))
-                print("MCTS CHOOSING BEST ACTION...")
+                # print("MCTS CHOOSING BEST ACTION...")
                 move = mcts.choose_action(betting_index % len(active_players))
                 print(f"MCTS HAS CHOSEN BEST ACTION: {move}")
             else:

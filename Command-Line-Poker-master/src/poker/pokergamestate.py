@@ -50,7 +50,7 @@ class PokerGameState:
         player = self.players[player_index]
 
         #if self.game.show_table:
-        print(f"EVALUATE: Player {player.name}; {action}")
+        # print(f"EVALUATE: Player {player.name}; {action}")
 
         new_state = PokerGameState(player_index, self.game, self.last_bet, self.raise_amount,
                                    self.players, action, self.phase)
@@ -180,7 +180,7 @@ class PokerGameState:
             list(map(lambda p: f"{p.name} locked?: {p.is_locked or p.is_folded or p.is_all_in}", self.players)))
         #print(f"{all_locked}")
         if all(player.is_locked or player.is_all_in or player.is_folded for player in self.players):
-            print(f"ADVANCING from {self.phase}")
+            # print(f"ADVANCING from {self.phase}")
             self.advance_to_next_round(deck)
 
     def advance_to_next_round(self, deck):
@@ -198,7 +198,7 @@ class PokerGameState:
             self.determine_winners(deck)
             for player in self.players:
                 player.fold()
-        print(f"to {self.phase}")
+        # print(f"to {self.phase}")
             # self.reset_for_next_round(deck)
 
     def update_turn(self):
@@ -260,12 +260,12 @@ class PokerGameState:
                 player.is_in_game = False
         active_players = self.players
         if len(active_players) == 1:
-            text_prompt.show_table(self.players, self.table)
-            text_prompt.show_game_winners(self.players, [active_players[0].name])
+            # text_prompt.show_table(self.players, self.table)
+            # text_prompt.show_game_winners(self.players, [active_players[0].name])
             return True
         else:
             while True:
-                text_prompt.clear_screen()
+                # text_prompt.clear_screen()
                 # user_choice = io_utils.input_no_return(
                 #     "Continue on to next hand? Press (enter) to continue or (n) to stop.   ")
                 # if 'n' in user_choice.lower():
