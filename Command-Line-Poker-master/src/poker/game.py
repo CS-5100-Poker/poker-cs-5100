@@ -34,10 +34,10 @@ class Game:
         self.agent_name = "Agent"
         self.show_table = True
         self.setup()
+        self.batch_size = 32
         players = (list(map(lambda p: copy.deepcopy(p), self.get_active_players())))
         init_game_state = PokerGameState(copy.deepcopy(self), copy.deepcopy(self.deck), self.table.last_bet, self.table.raise_amount, players)
         self.deep_q = DeepQLearning(init_game_state)
-
     def play(self) -> None:
         """Runs the main loop of the game."""
         while True:
@@ -52,6 +52,7 @@ class Game:
             self.table.hands_played += 1
             if self.check_game_over():
                 break
+        self.deep_q.save_model()
 
     def setup(self) -> None:
         """Sets up the game before any rounds are run."""
@@ -290,6 +291,7 @@ class Game:
                 updated_game_state = PokerGameState(copy.deepcopy(self), copy.deepcopy(self.deck), self.table.last_bet,
                                             self.table.raise_amount, players, betting_index % len(active_players))
                 self.deep_q.update_state(self.deep_q.game_state, move, updated_game_state)
+                self.deep_q.update_model_q_values(self.batch_size)
             betting_index += 1
             text_prompt.show_table(self.players, self.table)
 
@@ -370,6 +372,7 @@ class Game:
             updated_game_state = PokerGameState(copy.deepcopy(self), copy.deepcopy(self.deck), self.table.last_bet,
                                                 self.table.raise_amount, players, self.deep_q.game_state.last_action, 0)
             self.deep_q.update_state(self.deep_q.game_state, self.deep_q.game_state.last_action, updated_game_state)
+            self.deep_q.update_model_q_values(self.batch_size)
             return True
 
         for player in self.get_active_players():

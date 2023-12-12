@@ -1,8 +1,10 @@
+import os
 import random
 
 from collections import deque
 from tensorflow.keras.layers import Input, Dense
-from tensorflow.keras.models import Model
+from tensorflow.keras.models import Model, Sequential
+from tensorflow.keras.optimizers import Adam
 import numpy as np
 
 from src.poker.enums.betting_move import BettingMove
@@ -11,31 +13,14 @@ class DeepQLearning:
     def __init__(self, game_state):
         self.game_state = game_state
         self.action_size = 4 # may change
-        self.model = self._build_model()
+        self.model_backup = "model_backup.h5"
         self.memory = deque(maxlen=2000)
         self.gamma = 0.95  # discount rate
         self.epsilon = 1.0  # exploration rate
         self.epsilon_min = 0.01
         self.epsilon_decay = 0.995
         self.learning_rate = 0.001
-
-
-        # input as some vector
-        # keras -> input layer to relu other layer x
-        # output -> dense(2)(x)
-        # model = Model(inputs=[input_n], outputs=out)
-        # model.compile(optimizer='adam', loss='mse') mean-sqyared
-        # return model
-
-        # number of episodes - run things
-        # state action table - instead a q network
-            # input - state of the environment
-            # output - q value per action
-        # poker - play a large number of hands
-
-        pass
-
-
+        self.model = self._build_model()
 
     def choose_action(self):
         # Example pseudocode:
@@ -64,11 +49,9 @@ class DeepQLearning:
 
         self.remember(start_state, action, reward, new_state, done)
 
-        # check if the new state is game over
-        # if so, record the reward
-        # else, record 0
-
     def update_model_q_values(self, batch_size):
+        if len(self.memory) < batch_size:
+            return
         minibatch = random.sample(self.memory, batch_size)
         for state, action, reward, next_state, done in minibatch:
             target = reward
@@ -81,20 +64,29 @@ class DeepQLearning:
             self.epsilon *= self.epsilon_decay
 
     def _build_features_vector(self):
-        return self.game_state.make_features()
+        return []
 
     def _build_model(self):
-        input_n = Input(shape=(16,), name="input")
-        x = Dense(24, activation='relu')(input_n)
-        out = Dense(2)(x)
+        model = Sequential()
 
-        model = Model(inputs=[input_n], outputs=out)
-        model.compile(optimizer='adam', loss='mse')
+        model.add(Dense(24, input_dim=1, activation='relu'))
+        # input_n = Input(shape=(16,), name="input")
+        # x = Dense(24, activation='relu')(input_n)
+        model.add(Dense(self.action_size, activation='linear'))
+        #out = Dense(2)(x)
+
+        # model = Model(inputs=[input_n], outputs=out)
+        #model.compile(optimizer='adam', loss='mse')
+        optimizer = Adam(lr=self.learning_rate)
+        model.compile(loss='mse', optimizer=optimizer)
+
+        if os.path.isfile(self.model_backup):
+            model.load_weights(self.model_backup)
+            self.epsilon = self.epsilon_min
         return model
 
-
-    # METHODS
-        # Calculate q value as reward + discount * max_action(s', a')
+    def save_model(self):
+        self.model.save(self.model_backup, clear_optimizer=True)
 
 
 """
