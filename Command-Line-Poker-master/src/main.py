@@ -17,10 +17,16 @@ from src.poker.pokergamestate import Game
 # TODO: Look for bugs
 # TODO: Expand on current functionality
 def main():
-    game = Game(1, True)  # number of 'rounds' in a game (before resetting coins)
-    game.play(1)  # number or 'rounds' (times that betting is reset)
-    print(game.net_wins)
-
+    all_winnings = []
+    while len(all_winnings) < 100:
+        game = Game(1, False)  # number of 'rounds' in a game (before resetting coins)
+        while len(game.agent_winnings) < 1:
+            game.play()
+        print(f"AGENT CHIPS {game.agent_winnings}")
+        all_winnings = all_winnings + game.agent_winnings
+    print(f"all winnings {all_winnings}")
+    for w in all_winnings:
+        print(f"{w}")
 
 if __name__ == '__main__':
     main()

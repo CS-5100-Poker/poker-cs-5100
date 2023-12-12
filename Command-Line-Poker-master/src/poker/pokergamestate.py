@@ -38,37 +38,24 @@ class Game:
         self.net_wins = []
         self.show_table = log_table
         self.setup()
-        self.start_chips = self.get_agent_chips()
+        self.agent_winnings = []
 
-    def play(self, games_total) -> None:
+    def play(self) -> None:
         """Runs the main loop of the game."""
         while True:
-            print(f"GAMES REMAINING: {games_total}")
-            rounds_total = self.remaining_rounds
             self.reset_for_next_round()
-            while rounds_total != 0:
-                self.start_chips = self.get_agent_chips()
-                for phase in Phase:
-                    self.phase = phase
-                    self.deal_cards()
-                    self.run_round_of_betting()
-                    if self.check_hand_over():
-                        # end_chips = self.get_agent_chips()
-                        # self.net_wins.append(end_chips - self.start_chips)
-                        # print(f"ROUNDS LEFT: {rounds_total}")
-                        break
-                # break
-                self.determine_winners()
-                self.table.hands_played += 1
-                rounds_total -= 1
-                end_chips = self.get_agent_chips()
-                self.net_wins.append(end_chips - self.start_chips)
-                print(f"NET: {end_chips - self.start_chips}")
+            for phase in Phase:
+                self.phase = phase
+                self.deal_cards()
+                self.run_round_of_betting()
+                if self.check_hand_over():
+                    break
+            self.determine_winners()
+            if len(self.agent_winnings) == 3:
+                break
+            self.table.hands_played += 1
             if self.check_game_over():
                 break
-            #games_total -= 1
-
-
     def setup(self) -> None:
         """Sets up the game before any rounds are run."""
         num_computer_players = 1
@@ -77,14 +64,14 @@ class Game:
         self.table.big_blind = 2000
 
     def create_players(self, num_computer, starting_chips) -> None:
-        playing_style1 = random.choice(list(ComputerPlayingStyle))
+        playing_style1 = ComputerPlayingStyle.RISKY
         human = Computer(self.agent_name, playing_style1)
         self.players.append(human)
         names = ['Homer', 'Bart', 'Lisa', 'Marge', 'Milhouse', 'Moe', 'Maggie', 'Nelson', 'Ralph']
         computer_names = [n for n in names if n != human.name]
         random.shuffle(computer_names)
         for _ in range(num_computer):
-            playing_style = random.choice(list(ComputerPlayingStyle))
+            playing_style = ComputerPlayingStyle.RISKY
             computer = Computer(computer_names.pop(), playing_style)
             self.players.append(computer)
         for player in self.players:
@@ -366,7 +353,7 @@ class Game:
         else:
             # If only 1 player is eligible for last side pot (i.e. other players folded/all-in), award player that pot
             players_eligible_last_pot = []
-            for player in self.table.pots[-1][1]:
+            for player in self.get_active_players():
                 if not player.is_folded:
                     players_eligible_last_pot.append(player)
             if len(players_eligible_last_pot) == 1:
@@ -379,6 +366,10 @@ class Game:
             while len(self.table.community) < 5:
                 self.table.community.extend(self.deck.deal(1))
             self.showdown()
+        start_chips = self.get_agent_chips(True)
+        winnings = self.get_agent_chips(False) - start_chips
+        if winnings != 0:
+            self.agent_winnings.append(winnings)
 
     def showdown(self):
         """Runs the showdown phase."""
@@ -391,7 +382,7 @@ class Game:
         # Divvy chips to the winner(s) of each pot/side pot
         for i in reversed(range(len(self.table.pots))):
             showdown_players = []
-            for player in self.table.pots[i][1]:
+            for player in self.get_active_players():
                 if not player.is_folded:
                     showdown_players.append(player)
             hand_winners = hand_ranking_utils.determine_showdown_winner(showdown_players, self.table.community)
@@ -409,8 +400,6 @@ class Game:
         Returns:
             bool: True if the game is over, False otherwise.
         """
-        end_chips = self.get_agent_chips()
-        print(f"NET: {end_chips - self.start_chips}")
         for player in self.get_active_players():
             if player.chips <= 0:
                 player.is_in_game = False
@@ -423,21 +412,21 @@ class Game:
             while True:
                 if self.show_table:
                     text_prompt.clear_screen()
-                user_choice = io_utils.input_no_return(
-                      "Continue on to next hand? Press (enter) to continue or (n) to stop.   ")
-                if 'n' in user_choice.lower(): # if self.remaining_rounds != 0:
-                    max_chips = max(self.get_active_players(), key=lambda player: player.chips).chips
-                    winners_names = [player.name for player in self.get_active_players() if player.chips == max_chips]
-                    if self.show_table:
-                        text_prompt.show_table(self.players, self.table)
-                        text_prompt.show_game_winners(self.players, winners_names)
-                    return True
+                # user_choice = io_utils.input_no_return(
+                #       "Continue on to next hand? Press (enter) to continue or (n) to stop.   ")
+                # if 'n' in user_choice.lower(): # if self.remaining_rounds != 0:
+                #     max_chips = max(self.get_active_players(), key=lambda player: player.chips).chips
+                #     winners_names = [player.name for player in self.get_active_players() if player.chips == max_chips]
+                #     if self.show_table:
+                #         text_prompt.show_table(self.players, self.table)
+                #         text_prompt.show_game_winners(self.players, winners_names)
+                #     return True
                 return False
 
-    def get_agent_chips(self):
+    def get_agent_chips(self, start):
         agents = [p for p in self.players if p.name == "Agent"]
         if len(agents) > 0:
-            return agents[0].chips
+            return agents[0].start_chips if start else agents[0].chips
         else:
             return -9999999999999999
 
@@ -524,7 +513,7 @@ class PokerGameState:
         value, hand = hand_ranking_utils.estimate_hand(currentHand, self.deck, community)
         # print(f"{len(self.deck.cards)} remaining cards in deck")
         prob_win = value / 100000000000  # lol make this better
-        end_chips = self.game.get_agent_chips()
+        end_chips = self.game.get_agent_chips(False)
         ret = 0
         if self.last_action is None:
             ret = end_chips - start_chips
