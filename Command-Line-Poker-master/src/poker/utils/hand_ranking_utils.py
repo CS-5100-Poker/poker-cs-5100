@@ -8,7 +8,7 @@ break ties between hands of that particular rank.
 A kicker card (tie-breaker card) is evaluated in cases where the rules of game call for one.
 #######################################################################################################################
 """
-
+import copy
 from itertools import combinations
 
 card_int_str_dict = {

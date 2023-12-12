@@ -1,10 +1,16 @@
+import random
+
+from collections import deque
 from tensorflow.keras.layers import Input, Dense
 from tensorflow.keras.models import Model
 import numpy as np
 
+from src.poker.enums.betting_move import BettingMove
+
 class DeepQLearning:
-    def __init__(self):
+    def __init__(self, game_state):
         self.game_state = game_state
+        self.action_size = 4 # may change
         self.model = self._build_model()
         self.memory = deque(maxlen=2000)
         self.gamma = 0.95  # discount rate
@@ -35,7 +41,8 @@ class DeepQLearning:
         # Example pseudocode:
         current_state = self._build_features_vector()
         action = self.act(current_state)
-        return action # need to convert
+        print(f"Choosing... {action}")
+        return BettingMove.CALLED # need to convert
 
     def act(self, state):
         if np.random.rand() <= self.epsilon:
@@ -49,7 +56,7 @@ class DeepQLearning:
 
     def update_state(self, start_state, action, new_state):
         if new_state.game.check_game_over():
-            reward = new_state.potsize # replace with end - start chips
+            reward = new_state.game.table.pots[0][0]
             done = True
         else:
             reward = 0

@@ -16,7 +16,7 @@ from .table import Table
 from .utils import hand_ranking_utils
 from .utils import io_utils
 
-from .agents.deep_q import DeepQAgent
+from .agents.deep_q import DeepQLearning
 
 
 class Game:
@@ -36,7 +36,7 @@ class Game:
         self.setup()
         players = (list(map(lambda p: copy.deepcopy(p), self.get_active_players())))
         init_game_state = PokerGameState(copy.deepcopy(self), copy.deepcopy(self.deck), self.table.last_bet, self.table.raise_amount, players)
-        self.deep_q = DeepQAgent(init_game_state)
+        self.deep_q = DeepQLearning(init_game_state)
 
     def play(self) -> None:
         """Runs the main loop of the game."""
@@ -286,9 +286,10 @@ class Game:
                 self.set_game_speed(is_fast=True)
             betting_player.is_locked = True
             if betting_player.name is self.agent_name:
-                updated_game_state = PokerGameState(copy.deepcopy(self), self.deck.copy(), self.table.last_bet,
+                players = (list(map(lambda p: copy.deepcopy(p), self.get_active_players())))
+                updated_game_state = PokerGameState(copy.deepcopy(self), copy.deepcopy(self.deck), self.table.last_bet,
                                             self.table.raise_amount, players, betting_index % len(active_players))
-                self.deep_q.update_state(deep_q.game_state, move, updated_game_state)
+                self.deep_q.update_state(self.deep_q.game_state, move, updated_game_state)
             betting_index += 1
             text_prompt.show_table(self.players, self.table)
 
@@ -365,6 +366,10 @@ class Game:
             if not player.is_folded:
                 countNotFolded += 1
         if countNotFolded <= 1:
+            players = (list(map(lambda p: copy.deepcopy(p), self.get_active_players())))
+            updated_game_state = PokerGameState(copy.deepcopy(self), copy.deepcopy(self.deck), self.table.last_bet,
+                                                self.table.raise_amount, players, self.deep_q.game_state.last_action, 0)
+            self.deep_q.update_state(self.deep_q.game_state, self.deep_q.game_state.last_action, updated_game_state)
             return True
 
         for player in self.get_active_players():
@@ -378,14 +383,14 @@ class Game:
         else:
             while True:
                 text_prompt.clear_screen()
-                user_choice = io_utils.input_no_return(
-                    "Continue on to next hand? Press (enter) to continue or (n) to stop.   ")
-                if 'n' in user_choice.lower():
-                    max_chips = max(self.get_active_players(), key=lambda player: player.chips).chips
-                    winners_names = [player.name for player in self.get_active_players() if player.chips == max_chips]
-                    text_prompt.show_table(self.players, self.table)
-                    text_prompt.show_game_winners(self.players, winners_names)
-                    return True
+                # user_choice = io_utils.input_no_return(
+                #     "Continue on to next hand? Press (enter) to continue or (n) to stop.   ")
+                # if 'n' in user_choice.lower():
+                #     max_chips = max(self.get_active_players(), key=lambda player: player.chips).chips
+                #     winners_names = [player.name for player in self.get_active_players() if player.chips == max_chips]
+                #     text_prompt.show_table(self.players, self.table)
+                #     text_prompt.show_game_winners(self.players, winners_names)
+                #     return True
                 return False
 
     def get_active_players(self) -> list[Player]:

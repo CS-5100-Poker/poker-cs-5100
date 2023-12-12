@@ -30,6 +30,6 @@ def flush_input():
 def clear_screen():
     """Clear the screen."""
     # For IDEs
-    print('\n' * 100)
+    #print('\n' * 100)
     # For OS terminals
     os.system('cls' if os.name == 'nt' else 'clear')

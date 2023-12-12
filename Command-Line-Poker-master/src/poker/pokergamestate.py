@@ -11,7 +11,7 @@ class PokerGameState:
         self.players = players
         self.table = copy.deepcopy(self.game.table)
         self.current_player = self.players[curr_player_index] if curr_player_index else None
-        self.our_hand = self.current_player.hand if curr_player_index else None
+        self.our_hand = self.current_player.hand if curr_player_index else []
         self.last_bet = table_last_best
         self.winnings = -table_last_best
         self.deck = deck
@@ -229,15 +229,34 @@ class PokerGameState:
         # our hand & shared cards
         community = self.table.community
         currentHand = self.our_hand
-        #hand_value = hand_ranking_utils.estimate_hand(currentHand, self.deck, community)
-        cards_array = [0] * 4
+        hand_value = hand_ranking_utils.estimate_hand(currentHand, self.deck, community)[0]
+        cards_array = [0] * 5
         # [0, 0, 0, 0] , [1,0,0,0] ... [0,0,0,1]
-        if 5000000000 < hand_value < 10000000000:
+        if 0 < hand_value < 5000000000:
             cards_array[0] = 1
+        elif 5000000000 < hand_value < 10000000000:
+            cards_array[1] = 1
+        elif 10000000000 < hand_value < 15000000000:
+            cards_array[2] = 1
+        elif 15000000000 < hand_value < 20000000000:
+            cards_array[3] = 1
+        else:
+            cards_array[4] = 1
 
         # pot size
         # [0, 0, 0, 0] based on ranges
-        pot_size = [0, 0, 0, 0]
+        pots = self.game.table.pots[0] if len(self.game.table.pots) > 0 else 100000
+        pot_size = [0, 0, 0, 0, 0]
+        if pots < 50000:
+            pot_size[0] = 1
+        elif pots < 100000:
+            pot_size[1] = 1
+        elif pots < 150000:
+            pot_size[2] = 1
+        elif pots < 200000:
+            pot_size[3] = 1
+        else:
+            pot_size[4] = 1
 
         # our coins  based on ranges
         our_coins = [0, 0, 0, 0]
