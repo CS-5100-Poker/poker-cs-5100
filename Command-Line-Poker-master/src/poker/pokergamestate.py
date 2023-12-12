@@ -29,17 +29,17 @@ class PokerGameState:
         last_bet = self.last_bet
         player_chips = self.current_player.chips
 
+        if player_chips > 0:
+            legal_actions.append(BettingMove.FOLDED)
+
+        if player_chips > self.last_bet:
+            legal_actions.append(BettingMove.RAISED)
+
         if self.last_bet == 0:
             legal_actions.append(BettingMove.CHECKED)
         else:
             if player_chips >= self.last_bet:
                 legal_actions.append(BettingMove.CALLED)
-
-        if player_chips > self.last_bet:
-            legal_actions.append(BettingMove.RAISED)
-
-        # if player_chips > 0:
-        #     legal_actions.append(BettingMove.FOLDED)
 
         if self.last_bet > player_chips > 0:
             legal_actions.append(BettingMove.ALL_IN)
@@ -57,13 +57,13 @@ class PokerGameState:
         new_state.apply_action(player, action, simulation_deck)
 
         # if self.game.show_table:
-        show_table(new_state.players, new_state.table)
+        # show_table(new_state.players, new_state.table)
 
         return new_state
 
     def incrementVisits(self):
         self.visits += 1
-        print(f"New visit value = {self.visits}")
+        # print(f"New visit value = {self.visits}")
 
 
     def eval_game_state(self, player_index):
@@ -86,17 +86,17 @@ class PokerGameState:
         player = self.players[player_index]
         start_chips = player.start_chips
 
-        if self.game.show_table:
-            print("Evaluating...")
-            print(f"{player.name} started with {start_chips}")
+        # if self.game.show_table:
+            # print("Evaluating...")
+            # print(f"{player.name} started with {start_chips}")
         community = self.table.community
         if self.current_player.name == "Agent":
             currentHand = self.our_hand
         else:
             currentHand = []
 
-        if self.game.show_table:
-            print(f"HAND: {show_cards(currentHand)}")
+        # if self.game.show_table:
+            #print(f"HAND: {show_cards(currentHand)}")
 
         value, hand = hand_ranking_utils.estimate_hand(currentHand, community)
         # print(f"{len(self.deck.cards)} remaining cards in deck")
@@ -121,8 +121,8 @@ class PokerGameState:
             num_if_lose = - 2 * start_chips
             ret = prob_win * num_if_win + (1 - prob_win) * num_if_lose
         #
-        if self.game.show_table:
-            print(f"EVAL VALUE: {ret}")
+        # if self.game.show_table:
+            # print(f"EVAL VALUE: {ret}")
         #show_cards(hand)
         return ret
 
@@ -137,8 +137,8 @@ class PokerGameState:
             call_amount = self.raise_amount - self.table.last_bet
             player.chips -= call_amount
             player.bet += call_amount
-            if self.game.show_table:
-                print(f"pots {self.table.pots[0][0]} added {call_amount}")
+            #if self.game.show_table:
+                #print(f"pots {self.table.pots[0][0]} added {call_amount}")
             self.table.pots[0][0] += call_amount
             self.raise_amount = self.table.last_bet
             # print(f"{player.name}...locking ON CALL from {player.is_locked}")
@@ -178,24 +178,27 @@ class PokerGameState:
     def check_and_update_round(self, deck):
         all_locked = (
             list(map(lambda p: f"{p.name} locked?: {p.is_locked or p.is_folded or p.is_all_in}", self.players)))
-        print(f"{all_locked}")
+        #print(f"{all_locked}")
         if all(player.is_locked or player.is_all_in or player.is_folded for player in self.players):
-            print(f"ADVANCING ")
+            print(f"ADVANCING from {self.phase}")
             self.advance_to_next_round(deck)
 
     def advance_to_next_round(self, deck):
-        print(f"{len(deck.cards)} remaining cards in deck")
-        if self.phase == Phase.PREFLOP:
+        #print(f"{len(deck.cards)} remaining cards in deck")
+        if self.phase == Phase.PREFLOP or len(self.table.community) == 0:
             self.phase = Phase.FLOP
             self.deal_community(3, deck)
-        elif self.phase == Phase.FLOP:
+        elif self.phase == Phase.FLOP or len(self.table.community) == 3:
             self.phase = Phase.TURN
             self.deal_community(1, deck)
-        elif self.phase == Phase.TURN:
+        elif self.phase == Phase.TURN or len(self.table.community) == 4:
             self.phase = Phase.RIVER
             self.deal_community(1, deck)
-        elif self.phase == Phase.RIVER:
+        elif self.phase == Phase.RIVER or len(self.table.community) >= 5:
             self.determine_winners(deck)
+            for player in self.players:
+                player.fold()
+        print(f"to {self.phase}")
             # self.reset_for_next_round(deck)
 
     def update_turn(self):
@@ -248,7 +251,7 @@ class PokerGameState:
         for player in self.players:
             if not player.is_folded:
                 countNotFolded += 1
-                print(f"Number of Players not folded: {countNotFolded}")
+                #print(f"Number of Players not folded: {countNotFolded}")
         if countNotFolded <= 1:
             return True
 
@@ -283,8 +286,6 @@ class PokerGameState:
             winner = unfolded_players[0]
             if winner.name == "Agent":
                 self.agentWins = True
-            for player in self.players:
-                player.fold()
         else:
             # If only 1 player is eligible for last side pot (i.e. other players folded/all-in), award player that pot
             players_eligible_last_pot = []
@@ -313,8 +314,6 @@ class PokerGameState:
             for winner in hand_winners:
                 if winner.name == "Agent":
                     self.agentWins = True
-            for player in self.players:
-                player.fold()
 
     def check_agent_wins(self):
         return self.agentWins

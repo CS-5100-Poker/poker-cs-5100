@@ -33,7 +33,7 @@ class Game:
         self.agent_name = "Agent"
         self.show_table = True
         self.setup()
-        self.start_chips = self.get_agent_chips()
+        self.agent_winnings = []
 
     def play(self) -> None:
         """Runs the main loop of the game."""
@@ -46,10 +46,11 @@ class Game:
                 if self.check_hand_over():
                     break
             self.determine_winners()
+            if len(self.agent_winnings) == 3:
+                break
             self.table.hands_played += 1
             if self.check_game_over():
                 break
-
     def setup(self) -> None:
         """Sets up the game before any rounds are run."""
         num_computer_players = 1
@@ -331,6 +332,9 @@ class Game:
             while len(self.table.community) < 5:
                 self.table.community.extend(self.deck.deal(1))
             self.showdown()
+        start_chips = self.get_agent_chips(True)
+        winnings = self.get_agent_chips(False) - start_chips
+        self.agent_winnings.append(winnings)
 
     def showdown(self):
         """Runs the showdown phase."""
@@ -384,7 +388,7 @@ class Game:
         for player in self.get_active_players():
             if not player.is_folded:
                 countNotFolded += 1
-                print(f"Number of Players not folded: {countNotFolded}")
+                # print(f"Number of Players not folded: {countNotFolded}")
         if countNotFolded <= 1:
             return True
 
@@ -409,10 +413,10 @@ class Game:
                 #     return True
                 return False
 
-    def get_agent_chips(self):
+    def get_agent_chips(self, start):
         agents = [p for p in self.players if p.name == "Agent"]
         if len(agents) > 0:
-            return agents[0].chips
+            return agents[0].start_chips if start else agents[0].chips
         else:
             return -9999999999999999
 

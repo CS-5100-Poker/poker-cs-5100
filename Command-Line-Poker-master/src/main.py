@@ -17,7 +17,17 @@ from .poker.game import Game
 # TODO: Look for bugs
 # TODO: Expand on current functionality
 def main():
-    Game().play()
+    all_winnings = []
+    while len(all_winnings) < 10:
+        game = Game()
+        while len(game.agent_winnings) < 1:
+            game.play()
+        print(f"AGENT CHIPS {game.agent_winnings}")
+        all_winnings = all_winnings + game.agent_winnings
+    print(f"all winnings {all_winnings}")
+    for w in all_winnings:
+        print(f"{w}")
+
 
 
 if __name__ == '__main__':
