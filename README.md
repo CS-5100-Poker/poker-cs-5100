@@ -24,9 +24,9 @@ To execute an agent, follow these steps:
 
 ## Acknowledgements
 
-We extend our gratitude to Quinn Qelery for the UI and gameplay foundation used in this project. The original work and repository by Quinn Qelery have been instrumental in the development of this project.
+We extend our gratitude to Quinn Elery for the UI and gameplay foundation used in this project. The original work and repository by Quinn Elery have been instrumental in the development of this project.
 
-[Quinn Qelery's Original Repository](https://github.com/qelery/Command-Line-Poker)
+[Quinn Elery's Original Repository](https://github.com/qelery/Command-Line-Poker)
 
 ---
 
