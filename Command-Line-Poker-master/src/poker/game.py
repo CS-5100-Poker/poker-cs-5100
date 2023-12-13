@@ -37,12 +37,14 @@ class Game:
         self.batch_size = 32
         self.agent_winnings = []
         players = (list(map(lambda p: copy.deepcopy(p), self.get_active_players())))
-        init_game_state = PokerGameState(copy.deepcopy(self), copy.deepcopy(self.deck), self.table.last_bet, self.table.raise_amount, players)
+        agent_index = self.get_agent_index()
+        init_game_state = PokerGameState(self, copy.deepcopy(self.deck), self.table.last_bet,
+                                         self.table.raise_amount, players, None, agent_index)
         deep_q = DeepQLearning(init_game_state)
         self.deep_q = deep_q
     def play(self) -> None:
         """Runs the main loop of the game."""
-        for episode_index in range(40):
+        for episode_index in range(1000):
             print(f"EPISODE {episode_index}")
             #while True:
             self.reset_for_next_round()
@@ -278,7 +280,7 @@ class Game:
     def bet_util_all_locked_in(self, first_act: int, active_players: list[Player]) -> None:
         betting_index = first_act
         players = (list(map(lambda p: copy.deepcopy(p), self.get_active_players())))
-        init_game_state = PokerGameState(copy.deepcopy(self), copy.deepcopy(self.deck), self.table.last_bet,
+        init_game_state = PokerGameState(self, copy.deepcopy(self.deck), self.table.last_bet,
                                             self.table.raise_amount, players, None, betting_index % len(active_players))
         while True:
             if all(player.is_locked or player.is_all_in for player in active_players):
@@ -312,7 +314,7 @@ class Game:
             betting_player.is_locked = True
             if betting_player.name is self.agent_name:
                 players = (list(map(lambda p: copy.deepcopy(p), self.get_active_players())))
-                updated_game_state = PokerGameState(copy.deepcopy(self), copy.deepcopy(self.deck), self.table.last_bet,
+                updated_game_state = PokerGameState(self, copy.deepcopy(self.deck), self.table.last_bet,
                                             self.table.raise_amount, players, move, betting_index % len(active_players))
                 self.deep_q.update_state(init_game_state, move, updated_game_state)
                 self.deep_q.update_model_q_values(self.batch_size)
@@ -433,3 +435,9 @@ class Game:
             return agents[0].start_chips if start else agents[0].chips
         else:
             return -9999999999999999
+
+    def get_agent_index(self):
+        for index, p in enumerate(self.players):
+            if p.name == "Agent":
+                return index
+        return -1

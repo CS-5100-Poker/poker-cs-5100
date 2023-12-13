@@ -6,7 +6,8 @@ from src.poker.utils import hand_ranking_utils
 
 
 class PokerGameState:
-    def __init__(self, game, deck, table_last_best: int, raise_amount: int, players, last_action = None, curr_player_index=None):
+    def __init__(self, game, deck, table_last_best: int, raise_amount: int, players, last_action = None,
+                 curr_player_index=None):
         self.game = game
         self.players = players
         self.table = copy.deepcopy(self.game.table)
@@ -231,28 +232,46 @@ class PokerGameState:
         community = self.table.community
         currentHand = self.our_hand
         hand_value = hand_ranking_utils.estimate_hand(currentHand, self.deck, community)[0]
-        cards_array = [0] * 4
-        if 5000000000 <= hand_value < 10000000000:
+        hand_value_scaled_down = hand_value / 250000000000
+        print(f"Hand value: {hand_value_scaled_down}")
+        cards_array = [0] * 8
+        if 0.025 <= hand_value_scaled_down < 0.05:
             cards_array[0] = 1
-        elif 10000000000 <= hand_value < 15000000000:
+        elif 0.05 <= hand_value_scaled_down < 0.075:
             cards_array[1] = 1
-        elif 15000000000 <= hand_value < 20000000000:
+        elif 0.075 <= hand_value_scaled_down < 0.1:
             cards_array[2] = 1
-        elif 20000000000 <= hand_value:
+        elif 0.10 <= hand_value_scaled_down < 0.125:
             cards_array[3] = 1
+        elif 0.125 <= hand_value_scaled_down < 0.15:
+            cards_array[4] = 1
+        elif 0.15 <= hand_value_scaled_down < 0.175:
+            cards_array[5] = 1
+        elif 0.175 <= hand_value_scaled_down < 0.2:
+            cards_array[6] = 1
+        elif 0.2 <= hand_value_scaled_down:
+            cards_array[7] = 1
 
         # pot size
         # [0, 0, 0, 0] based on ranges
         pots = self.game.table.pots[0][0] if len(self.game.table.pots) > 0 else 100000
-        pot_size = [0] * 4
-        if 50000 <= pots < 100000:
+        pot_size = [0] * 8
+        if 1000 <= pots < 2000:
             pot_size[0] = 1
-        elif 100000 <= pots < 150000:
+        elif 2000 <= pots < 5000:
             pot_size[1] = 1
-        elif 150000 <= pots < 200000:
+        elif 5000 <= pots < 10000:
             pot_size[2] = 1
-        elif 200000 <= pots:
+        elif 10000 <= pots < 50000:
             pot_size[3] = 1
+        if 50000 <= pots < 100000:
+            pot_size[4] = 1
+        elif 100000 <= pots < 150000:
+            pot_size[5] = 1
+        elif 150000 <= pots < 200000:
+            pot_size[6] = 1
+        elif 200000 <= pots:
+            pot_size[7] = 1
 
         # our chips based on ranges
         chips = self.our_chips
